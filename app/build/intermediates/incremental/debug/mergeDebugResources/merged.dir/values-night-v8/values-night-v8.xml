@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="nav_accent">#FF4CDADC</color>
+    <color name="nav_icon">#FFDDE4E3</color>
+    <color name="nav_on_accent">#FF003738</color>
+    <color name="nav_track">#40FFFFFF</color>
+</resources>

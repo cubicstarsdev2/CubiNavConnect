@@ -1,0 +1,26 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.tahvia.nav.app-mergeDebugResources-47:/values-night-v8/values-night-v8.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\Tahiel\\Downloads\\TahviaNav\\TahviaNav\\app\\src\\main\\res\\values-night\\nav_colors.xml",
+                    "from": {
+                        "startLines": "2,4,3,5",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,152,102,197",
+                        "endColumns": "46,44,49,45",
+                        "endOffsets": "97,192,147,238"
+                    },
+                    "to": {
+                        "startLines": "2,3,4,5",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,102,147,197",
+                        "endColumns": "46,44,49,45",
+                        "endOffsets": "97,142,192,238"
+                    }
+                }
+            ]
+        }
+    ]
+}

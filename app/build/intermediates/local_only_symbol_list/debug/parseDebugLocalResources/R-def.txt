@@ -1,0 +1,30 @@
+R_DEF: Internal format may change without notice
+local
+color nav_accent
+color nav_icon
+color nav_on_accent
+color nav_track
+drawable ic_nav_bt
+drawable ic_nav_done
+drawable ic_nav_open
+drawable ic_nav_recalc
+drawable ic_nav_stop
+drawable ic_stat_nav
+drawable nav_btn_stop
+drawable nav_progress
+id b_disc
+id b_open
+id b_recalc
+id b_stop
+id bar
+id subtitle
+id t_left
+id t_right
+id title
+id turn_icon
+id w_disc
+id w_open
+id w_recalc
+id w_stop
+layout notif_nav_big
+layout notif_nav_small

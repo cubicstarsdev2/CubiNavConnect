@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.tahvia.nav"
+    namespace = "com.cubicl.cubinavapp"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.tahvia.nav"
+        applicationId = "com.cubicl.cubinavapp"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

@@ -1,11 +1,11 @@
-#Fri Nov 13 23:59:50 GMT-03:00 2026
-base.0=D\:\\TahviaNav\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes.dex
-base.1=D\:\\TahviaNav\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\0\\classes.dex
-base.2=D\:\\TahviaNav\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\10\\classes.dex
-base.3=D\:\\TahviaNav\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes2.dex
+#Sat Nov 14 08:45:20 GMT-03:00 2026
+base.0=D\:\\CubiNavConnect\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes.dex
+base.1=D\:\\CubiNavConnect\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\0\\classes.dex
+base.2=D\:\\CubiNavConnect\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\9\\classes.dex
+base.3=D\:\\CubiNavConnect\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes2.dex
 path.0=classes.dex
 path.1=0/classes.dex
-path.2=10/classes.dex
+path.2=9/classes.dex
 path.3=classes2.dex
 renamed.0=classes.dex
 renamed.1=classes2.dex

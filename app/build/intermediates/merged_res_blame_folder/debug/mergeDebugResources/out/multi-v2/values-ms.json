@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.tahvia.nav.app-mergeDebugResources-47:/values-ms/values-ms.xml",
+            "outputFile": "com.cubicl.cubinavapp-mergeDebugResources-47:/values-ms/values-ms.xml",
             "map": [
                 {
                     "source": "C:\\Users\\Tahiel\\.gradle\\caches\\9.6.0\\transforms\\e1230147cca542514d4c2798b1c27957\\transformed\\ui-release\\res\\values-ms\\values-ms.xml",

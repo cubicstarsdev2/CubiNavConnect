@@ -1,6 +1,6 @@
 1<?xml version="1.0" encoding="utf-8"?>
 2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-3    package="com.tahvia.nav"
+3    package="com.cubicl.cubinavapp"
 4    android:versionCode="1"
 5    android:versionName="1.0" >
 6
@@ -9,57 +9,57 @@
 9        android:targetSdkVersion="35" />
 10
 11    <uses-feature
-11-->D:\TahviaNav\app\src\main\AndroidManifest.xml:5:5-90
+11-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:5:5-90
 12        android:name="android.hardware.bluetooth_le"
-12-->D:\TahviaNav\app\src\main\AndroidManifest.xml:5:19-63
+12-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:5:19-63
 13        android:required="true" />
-13-->D:\TahviaNav\app\src\main\AndroidManifest.xml:5:64-87
+13-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:5:64-87
 14
 15    <uses-permission android:name="android.permission.INTERNET" />
-15-->D:\TahviaNav\app\src\main\AndroidManifest.xml:7:5-67
-15-->D:\TahviaNav\app\src\main\AndroidManifest.xml:7:22-64
+15-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:7:5-67
+15-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:7:22-64
 16    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-16-->D:\TahviaNav\app\src\main\AndroidManifest.xml:8:5-79
-16-->D:\TahviaNav\app\src\main\AndroidManifest.xml:8:22-76
+16-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:8:5-79
+16-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:8:22-76
 17    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-17-->D:\TahviaNav\app\src\main\AndroidManifest.xml:9:5-79
-17-->D:\TahviaNav\app\src\main\AndroidManifest.xml:9:22-76
+17-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:9:5-79
+17-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:9:22-76
 18    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-18-->D:\TahviaNav\app\src\main\AndroidManifest.xml:10:5-81
-18-->D:\TahviaNav\app\src\main\AndroidManifest.xml:10:22-78
+18-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:10:5-81
+18-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:10:22-78
 19    <uses-permission
-19-->D:\TahviaNav\app\src\main\AndroidManifest.xml:12:5-95
+19-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:12:5-95
 20        android:name="android.permission.BLUETOOTH"
-20-->D:\TahviaNav\app\src\main\AndroidManifest.xml:12:22-65
+20-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:12:22-65
 21        android:maxSdkVersion="30" />
-21-->D:\TahviaNav\app\src\main\AndroidManifest.xml:12:66-92
+21-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:12:66-92
 22    <uses-permission
-22-->D:\TahviaNav\app\src\main\AndroidManifest.xml:13:5-101
+22-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:13:5-101
 23        android:name="android.permission.BLUETOOTH_ADMIN"
-23-->D:\TahviaNav\app\src\main\AndroidManifest.xml:13:22-71
+23-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:13:22-71
 24        android:maxSdkVersion="30" />
-24-->D:\TahviaNav\app\src\main\AndroidManifest.xml:13:72-98
+24-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:13:72-98
 25    <uses-permission
-25-->D:\TahviaNav\app\src\main\AndroidManifest.xml:14:5-17:31
+25-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:14:5-17:31
 26        android:name="android.permission.BLUETOOTH_SCAN"
-26-->D:\TahviaNav\app\src\main\AndroidManifest.xml:15:9-57
+26-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:15:9-57
 27        android:usesPermissionFlags="neverForLocation" />
-27-->D:\TahviaNav\app\src\main\AndroidManifest.xml:16:9-55
+27-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:16:9-55
 28    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-28-->D:\TahviaNav\app\src\main\AndroidManifest.xml:18:5-76
-28-->D:\TahviaNav\app\src\main\AndroidManifest.xml:18:22-73
+28-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:18:5-76
+28-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:18:22-73
 29    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-29-->D:\TahviaNav\app\src\main\AndroidManifest.xml:20:5-77
-29-->D:\TahviaNav\app\src\main\AndroidManifest.xml:20:22-74
+29-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:20:5-77
+29-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:20:22-74
 30    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
-30-->D:\TahviaNav\app\src\main\AndroidManifest.xml:21:5-86
-30-->D:\TahviaNav\app\src\main\AndroidManifest.xml:21:22-83
+30-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:21:5-86
+30-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:21:22-83
 31    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
-31-->D:\TahviaNav\app\src\main\AndroidManifest.xml:22:5-94
-31-->D:\TahviaNav\app\src\main\AndroidManifest.xml:22:22-91
+31-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:22:5-94
+31-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:22:22-91
 32    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-32-->D:\TahviaNav\app\src\main\AndroidManifest.xml:23:5-77
-32-->D:\TahviaNav\app\src\main\AndroidManifest.xml:23:22-74
+32-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:23:5-77
+32-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:23:22-74
 33    <!-- OpenGL ES 3.0 required -->
 34    <uses-feature
 34-->[org.maplibre.gl:android-sdk:11.8.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\1d80240121903d3919b4dd05cf3c8103\transformed\android-sdk-11.8.0\AndroidManifest.xml:7:5-9:35
@@ -80,57 +80,57 @@
 42
 43    <permission
 43-->[androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fa878627c27074b90ee4432ac9a17c8a\transformed\core-1.15.0\AndroidManifest.xml:22:5-24:47
-44        android:name="com.tahvia.nav.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+44        android:name="com.cubicl.cubinavapp.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
 44-->[androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fa878627c27074b90ee4432ac9a17c8a\transformed\core-1.15.0\AndroidManifest.xml:23:9-81
 45        android:protectionLevel="signature" />
 45-->[androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fa878627c27074b90ee4432ac9a17c8a\transformed\core-1.15.0\AndroidManifest.xml:24:9-44
 46
-47    <uses-permission android:name="com.tahvia.nav.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" /> <!-- cleartext: a self-hosted OSRM on the LAN is usually plain http. Remove if you serve https. -->
+47    <uses-permission android:name="com.cubicl.cubinavapp.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" /> <!-- cleartext: a self-hosted OSRM on the LAN is usually plain http. Remove if you serve https. -->
 47-->[androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fa878627c27074b90ee4432ac9a17c8a\transformed\core-1.15.0\AndroidManifest.xml:26:5-97
 47-->[androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fa878627c27074b90ee4432ac9a17c8a\transformed\core-1.15.0\AndroidManifest.xml:26:22-94
 48    <application
-48-->D:\TahviaNav\app\src\main\AndroidManifest.xml:26:5-46:19
+48-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:26:5-46:19
 49        android:allowBackup="false"
-49-->D:\TahviaNav\app\src\main\AndroidManifest.xml:27:9-36
+49-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:27:9-36
 50        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
 50-->[androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fa878627c27074b90ee4432ac9a17c8a\transformed\core-1.15.0\AndroidManifest.xml:28:18-86
 51        android:debuggable="true"
 52        android:extractNativeLibs="false"
-53        android:label="TahviaNav"
-53-->D:\TahviaNav\app\src\main\AndroidManifest.xml:28:9-34
+53        android:label="CubiNav App"
+53-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:28:9-36
 54        android:testOnly="true"
 55        android:theme="@android:style/Theme.Material.Light.NoActionBar"
-55-->D:\TahviaNav\app\src\main\AndroidManifest.xml:30:9-72
+55-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:30:9-72
 56        android:usesCleartextTraffic="true" >
-56-->D:\TahviaNav\app\src\main\AndroidManifest.xml:29:9-44
+56-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:29:9-44
 57        <activity
-57-->D:\TahviaNav\app\src\main\AndroidManifest.xml:32:9-40:20
-58            android:name="com.tahvia.nav.MainActivity"
-58-->D:\TahviaNav\app\src\main\AndroidManifest.xml:33:13-41
+57-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:32:9-40:20
+58            android:name="com.cubicl.cubinavapp.MainActivity"
+58-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:33:13-41
 59            android:exported="true"
-59-->D:\TahviaNav\app\src\main\AndroidManifest.xml:34:13-36
+59-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:34:13-36
 60            android:launchMode="singleTask" >
-60-->D:\TahviaNav\app\src\main\AndroidManifest.xml:35:13-44
+60-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:35:13-44
 61            <intent-filter>
-61-->D:\TahviaNav\app\src\main\AndroidManifest.xml:36:13-39:29
+61-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:36:13-39:29
 62                <action android:name="android.intent.action.MAIN" />
-62-->D:\TahviaNav\app\src\main\AndroidManifest.xml:37:17-69
-62-->D:\TahviaNav\app\src\main\AndroidManifest.xml:37:25-66
+62-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:37:17-69
+62-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:37:25-66
 63
 64                <category android:name="android.intent.category.LAUNCHER" />
-64-->D:\TahviaNav\app\src\main\AndroidManifest.xml:38:17-77
-64-->D:\TahviaNav\app\src\main\AndroidManifest.xml:38:27-74
+64-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:38:17-77
+64-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:38:27-74
 65            </intent-filter>
 66        </activity>
 67
 68        <service
-68-->D:\TahviaNav\app\src\main\AndroidManifest.xml:42:9-45:72
-69            android:name="com.tahvia.nav.NavService"
-69-->D:\TahviaNav\app\src\main\AndroidManifest.xml:43:13-39
+68-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:42:9-45:72
+69            android:name="com.cubicl.cubinavapp.NavService"
+69-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:43:13-39
 70            android:exported="false"
-70-->D:\TahviaNav\app\src\main\AndroidManifest.xml:44:13-37
+70-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:44:13-37
 71            android:foregroundServiceType="location|connectedDevice" />
-71-->D:\TahviaNav\app\src\main\AndroidManifest.xml:45:13-69
+71-->D:\CubiNavConnect\app\src\main\AndroidManifest.xml:45:13-69
 72
 73        <activity
 73-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\91678b507d0149e4af4427a3609acd93\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:9-173
@@ -152,7 +152,7 @@
 82-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fbadf3cf12f12148cbaea21f16df00f7\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
 83            android:name="androidx.startup.InitializationProvider"
 83-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fbadf3cf12f12148cbaea21f16df00f7\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
-84            android:authorities="com.tahvia.nav.androidx-startup"
+84            android:authorities="com.cubicl.cubinavapp.androidx-startup"
 84-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fbadf3cf12f12148cbaea21f16df00f7\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
 85            android:exported="false" >
 85-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fbadf3cf12f12148cbaea21f16df00f7\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37

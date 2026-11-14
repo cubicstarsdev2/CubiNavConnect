@@ -25,7 +25,7 @@
     <!-- cleartext: a self-hosted OSRM on the LAN is usually plain http. Remove if you serve https. -->
     <application
         android:allowBackup="false"
-        android:label="TahviaNav"
+        android:label="CubiNav App"
         android:usesCleartextTraffic="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
 

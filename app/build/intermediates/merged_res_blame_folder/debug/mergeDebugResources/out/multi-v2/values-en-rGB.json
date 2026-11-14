@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.tahvia.nav.app-mergeDebugResources-47:/values-en-rGB/values-en-rGB.xml",
+            "outputFile": "com.cubicl.cubinavapp-mergeDebugResources-47:/values-en-rGB/values-en-rGB.xml",
             "map": [
                 {
                     "source": "C:\\Users\\Tahiel\\.gradle\\caches\\9.6.0\\transforms\\fa878627c27074b90ee4432ac9a17c8a\\transformed\\core-1.15.0\\res\\values-en-rGB\\values-en-rGB.xml",

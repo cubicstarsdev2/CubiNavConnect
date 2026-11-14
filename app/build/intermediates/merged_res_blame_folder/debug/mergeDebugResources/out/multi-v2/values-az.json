@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.tahvia.nav.app-mergeDebugResources-47:/values-az/values-az.xml",
+            "outputFile": "com.cubicl.cubinavapp-mergeDebugResources-47:/values-az/values-az.xml",
             "map": [
                 {
                     "source": "C:\\Users\\Tahiel\\.gradle\\caches\\9.6.0\\transforms\\91678b507d0149e4af4427a3609acd93\\transformed\\play-services-base-18.5.0\\res\\values-az\\values.xml",

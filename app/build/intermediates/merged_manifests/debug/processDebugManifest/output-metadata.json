@@ -4,7 +4,7 @@
     "type": "MERGED_MANIFESTS",
     "kind": "Directory"
   },
-  "applicationId": "com.tahvia.nav",
+  "applicationId": "com.cubicl.cubinavapp",
   "variantName": "debug",
   "elements": [
     {

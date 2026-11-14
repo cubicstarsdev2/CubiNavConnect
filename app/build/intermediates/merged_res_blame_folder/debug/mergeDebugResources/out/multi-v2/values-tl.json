@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.cubicl.cubinavapp-mergeDebugResources-47:/values-tl/values-tl.xml",
+            "outputFile": "com.cubicl.cubinavconnect.app-mergeDebugResources-47:/values-tl/values-tl.xml",
             "map": [
                 {
                     "source": "C:\\Users\\Tahiel\\.gradle\\caches\\9.6.0\\transforms\\f9b034d71e2bda3ba8919fc07642ef69\\transformed\\foundation-release\\res\\values-tl\\values-tl.xml",

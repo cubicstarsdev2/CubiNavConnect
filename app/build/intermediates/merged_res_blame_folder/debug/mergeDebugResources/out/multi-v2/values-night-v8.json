@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.cubicl.cubinavapp-mergeDebugResources-47:/values-night-v8/values-night-v8.xml",
+            "outputFile": "com.cubicl.cubinavconnect.app-mergeDebugResources-47:/values-night-v8/values-night-v8.xml",
             "map": [
                 {
                     "source": "D:\\CubiNavConnect\\app\\src\\main\\res\\values-night\\nav_colors.xml",

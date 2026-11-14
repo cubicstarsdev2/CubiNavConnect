@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:2:1-47:12
-INJECTED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:2:1-47:12
-INJECTED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:2:1-47:12
-INJECTED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:2:1-47:12
+ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:2:1-49:12
+INJECTED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:2:1-49:12
+INJECTED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:2:1-49:12
+INJECTED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:2:1-49:12
 MERGED from [com.google.android.gms:play-services-location:21.3.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\b67cd4038c83bbc7e73f415371b3d3b3\transformed\play-services-location-21.3.0\AndroidManifest.xml:2:1-8:12
 MERGED from [com.google.android.gms:play-services-base:18.5.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\91678b507d0149e4af4427a3609acd93\transformed\play-services-base-18.5.0\AndroidManifest.xml:2:1-7:12
 MERGED from [com.google.android.gms:play-services-tasks:18.2.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\1c95dbf734c269167541e64d98b95f87\transformed\play-services-tasks-18.2.0\AndroidManifest.xml:2:1-5:12
@@ -140,8 +140,8 @@ ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:23:5-77
 	android:name
 		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:23:22-74
 application
-ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:26:5-46:19
-INJECTED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:26:5-46:19
+ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:26:5-48:19
+INJECTED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:26:5-48:19
 MERGED from [com.google.android.gms:play-services-location:21.3.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\b67cd4038c83bbc7e73f415371b3d3b3\transformed\play-services-location-21.3.0\AndroidManifest.xml:6:5-20
 MERGED from [com.google.android.gms:play-services-location:21.3.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\b67cd4038c83bbc7e73f415371b3d3b3\transformed\play-services-location-21.3.0\AndroidManifest.xml:6:5-20
 MERGED from [com.google.android.gms:play-services-base:18.5.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\91678b507d0149e4af4427a3609acd93\transformed\play-services-base-18.5.0\AndroidManifest.xml:4:5-6:19
@@ -169,39 +169,43 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Ta
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fa878627c27074b90ee4432ac9a17c8a\transformed\core-1.15.0\AndroidManifest.xml:28:18-86
 	android:label
-		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:28:9-36
+		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:28:9-40
+	android:roundIcon
+		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:31:9-54
+	android:icon
+		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:30:9-43
 	android:allowBackup
 		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:27:9-36
 	android:theme
-		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:30:9-72
+		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:32:9-72
 	android:usesCleartextTraffic
 		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:29:9-44
-activity#com.cubicl.cubinavapp.MainActivity
-ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:32:9-40:20
+activity#com.cubicl.cubinavconnect.MainActivity
+ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:34:9-42:20
 	android:launchMode
-		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:35:13-44
+		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:37:13-44
 	android:exported
-		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:34:13-36
+		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:36:13-36
 	android:name
-		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:33:13-41
+		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:35:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:36:13-39:29
+ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:38:13-41:29
 action#android.intent.action.MAIN
-ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:37:17-69
+ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:39:17-69
 	android:name
-		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:37:25-66
+		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:39:25-66
 category#android.intent.category.LAUNCHER
-ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:38:17-77
+ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:40:17-77
 	android:name
-		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:38:27-74
-service#com.cubicl.cubinavapp.NavService
-ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:42:9-45:72
+		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:40:27-74
+service#com.cubicl.cubinavconnect.NavService
+ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:44:9-47:72
 	android:exported
-		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:44:13-37
+		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:46:13-37
 	android:foregroundServiceType
-		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:45:13-69
+		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:47:13-69
 	android:name
-		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:43:13-39
+		ADDED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml:45:13-39
 uses-sdk
 INJECTED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from D:\CubiNavConnect\app\src\main\AndroidManifest.xml
@@ -378,7 +382,7 @@ ADDED from [androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\tran
 		ADDED from [androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fa878627c27074b90ee4432ac9a17c8a\transformed\core-1.15.0\AndroidManifest.xml:24:9-44
 	android:name
 		ADDED from [androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fa878627c27074b90ee4432ac9a17c8a\transformed\core-1.15.0\AndroidManifest.xml:23:9-81
-permission#com.cubicl.cubinavapp.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+permission#com.cubicl.cubinavconnect.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fa878627c27074b90ee4432ac9a17c8a\transformed\core-1.15.0\AndroidManifest.xml:22:5-24:47
 	android:protectionLevel
 		ADDED from [androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fa878627c27074b90ee4432ac9a17c8a\transformed\core-1.15.0\AndroidManifest.xml:24:9-44
@@ -388,7 +392,7 @@ uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fa878627c27074b90ee4432ac9a17c8a\transformed\core-1.15.0\AndroidManifest.xml:26:5-97
 	android:name
 		ADDED from [androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fa878627c27074b90ee4432ac9a17c8a\transformed\core-1.15.0\AndroidManifest.xml:26:22-94
-uses-permission#com.cubicl.cubinavapp.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+uses-permission#com.cubicl.cubinavconnect.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fa878627c27074b90ee4432ac9a17c8a\transformed\core-1.15.0\AndroidManifest.xml:26:5-97
 	android:name
 		ADDED from [androidx.core:core:1.15.0] C:\Users\Tahiel\.gradle\caches\9.6.0\transforms\fa878627c27074b90ee4432ac9a17c8a\transformed\core-1.15.0\AndroidManifest.xml:26:22-94

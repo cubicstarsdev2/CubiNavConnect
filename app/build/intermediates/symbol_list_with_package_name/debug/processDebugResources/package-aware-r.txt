@@ -1,4 +1,4 @@
-com.cubicl.cubinavapp
+com.cubicl.cubinavconnect
 anim fragment_fast_out_extra_slow_in
 animator fragment_close_enter
 animator fragment_close_exit
@@ -409,6 +409,10 @@ layout notification_template_custom_big
 layout notification_template_icon_group
 layout notification_template_part_chronometer
 layout notification_template_part_time
+mipmap ic_launcher
+mipmap ic_launcher_background
+mipmap ic_launcher_foreground
+mipmap ic_launcher_round
 raw boot_frames
 raw speed
 raw speed_arg

@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.cubicl.cubinavapp"
+    namespace = "com.cubicl.cubinavconnect"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.cubicl.cubinavapp"
+        applicationId = "com.cubicl.cubinavconnect"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

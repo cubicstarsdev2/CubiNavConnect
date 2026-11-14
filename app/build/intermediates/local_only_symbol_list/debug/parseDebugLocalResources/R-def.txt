@@ -28,6 +28,10 @@ id w_recalc
 id w_stop
 layout notif_nav_big
 layout notif_nav_small
+mipmap ic_launcher
+mipmap ic_launcher_background
+mipmap ic_launcher_foreground
+mipmap ic_launcher_round
 raw boot_frames
 raw speed
 raw speed_arg

@@ -1,34 +1,51 @@
-# CubiNav App
+# CubiNav Connect
 
-**CubiNav App** is the Android companion application for the **CubiNav** navigation device. It handles destination search, road routing, live GPS navigation and route progress on the phone, then synchronizes navigation data with a CubiNav device over Bluetooth Low Energy (BLE). Navigation can also run phone-only without a connected CubiNav device.
+**CubiNav Connect** is the Android companion application for the **CubiNav** navigation device. It handles destination search, road routing, live GPS navigation and route progress on the phone, then synchronizes navigation data with a CubiNav device over Bluetooth Low Energy (BLE). Navigation can also run phone-only without a connected CubiNav device.
 
 Built with Kotlin and Jetpack Compose.
 
 ## Features
 
 - **Live map:** MapLibre map showing current position, route, destination, snapped position and intermediate waypoints.
+
 - **Destination search:** Nominatim-compatible place search or direct coordinate entry.
+
 - **Multi-stop trips:** Ordered intermediate waypoints and multi-leg routing.
+
 - **Road routing:** OSRM directions, maneuver instructions, route duration and distance, with road-class exclusions when supported by the server.
+
 - **Live navigation:** Fused Location Provider, route map matching, heading and progress tracking, off-route detection and automatic rerouting.
+
 - **CubiNav integration:** Device discovery, pairing, protocol negotiation, position and maneuver updates, and route transfer.
+
 - **Rolling route streaming:** Transfers a moving route window using device acknowledgements and gap recovery.
+
 - **Background navigation:** Foreground service keeps location and BLE operation active while the app is backgrounded.
+
 - **Phone-only mode:** Navigation without a connected CubiNav device.
+
 - **GPX replay:** Replay recorded tracks through the navigation pipeline for testing.
+
 - **Firmware updater:** Check a firmware version source, download the binary and transfer it to CubiNav over BLE.
+
 - **Saved destinations:** Recent destinations and favorites.
+
 - **Diagnostics:** Device status, protocol activity and navigation debugging.
 
 ## Architecture
 
-**CubiNav App** is the navigation application; **CubiNav** is the external navigation device, including its firmware.
+**CubiNav Connect** is the navigation application; **CubiNav** is the external navigation device, including its firmware.
 
-1. The user chooses a destination and optional waypoints in CubiNav App.
+1. The user chooses a destination and optional waypoints in CubiNav Connect.
+
 2. The app geocodes text input and requests a route from the configured OSRM server.
+
 3. GPS fixes are matched against route geometry to calculate progress and the next maneuver.
+
 4. The app sends position, heading, speed, maneuver information and route geometry to CubiNav over BLE.
+
 5. CubiNav renders the navigation information on its TFT display.
+
 6. As the user advances, the app streams more route points and requests a replacement route when the user goes off course.
 
 The phone retains the full route and navigation state. CubiNav receives a compact local-coordinate route representation and the current navigation state.
@@ -36,20 +53,29 @@ The phone retains the full route and navigation state. CubiNav receives a compac
 ## Requirements
 
 - Android 8.0 (API 26) or newer.
+
 - Android Studio (Ladybug or newer, per the project setup notes).
+
 - JDK 17 and Android SDK 35.
+
 - A phone with Bluetooth Low Energy and location services for full navigation.
+
 - A CubiNav device for external-display functionality (optional for phone-only mode).
+
 - Network access for geocoding, routing, map tiles and firmware downloads.
 
 ## Build and run
 
 ### Android Studio
 
-1. Clone the CubiNav App repository.
-2. Open the CubiNav App project directory in Android Studio.
+1. Clone the CubiNav Connect repository.
+
+2. Open the CubiNav Connect project directory in Android Studio.
+
 3. Allow Gradle to sync and download the required SDK components.
+
 4. Connect an Android phone.
+
 5. Run the app configuration.
 
 For actual BLE and GPS testing, use a physical Android device.
@@ -59,23 +85,33 @@ For actual BLE and GPS testing, use a physical Android device.
 Linux/macOS:
 
 ```bash
+
 git clone https://github.com/cubicstarsdev2/CubiNav.git
+
 cd CubiNav
+
 ./gradlew assembleDebug
+
 ```
 
 Windows:
 
 ```bat
+
 git clone https://github.com/cubicstarsdev2/CubiNav.git
+
 cd CubiNav
+
 .\gradlew.bat assembleDebug
+
 ```
 
 Run unit tests:
 
 ```bash
+
 ./gradlew test
+
 ```
 
 The debug APK is produced under `app/build/outputs/apk/debug/`.
@@ -83,20 +119,26 @@ The debug APK is produced under `app/build/outputs/apk/debug/`.
 ## First launch and pairing
 
 1. Enable Android location services and Bluetooth.
-2. Launch **CubiNav App** and grant location and nearby-device permissions.
+
+2. Launch **CubiNav Connect** and grant location and nearby-device permissions.
+
 3. Power on CubiNav.
+
 4. Open the **Device** tab and tap **Scan**.
+
 5. Select CubiNav from the discovered-device list.
+
 6. Complete Android pairing using the passkey shown on the CubiNav TFT display.
-7. CubiNav App negotiates the BLE protocol and synchronizes navigation state.
+
+7. CubiNav Connect negotiates the BLE protocol and synchronizes navigation state.
 
 The app can remember the selected CubiNav device and reconnect to it. The Device tab also provides reconnect and forget controls.
 
-**Background operation:** Android may suspend BLE activity when the app is backgrounded. For reliable screen-off navigation, allow background location and foreground-service operation. Consider disabling battery optimization for CubiNav App.
+**Background operation:** Android may suspend BLE activity when the app is backgrounded. For reliable screen-off navigation, allow background location and foreground-service operation. Consider disabling battery optimization for CubiNav Connect.
 
 ## Routing and map configuration
 
-Open the **Settings** tab to configure the services used by CubiNav App.
+Open the **Settings** tab to configure the services used by CubiNav Connect.
 
 ### Geocoding
 
@@ -108,22 +150,34 @@ Set a descriptive User-Agent containing a real contact method when using the pub
 
 The app uses the OSRM Route service. It requests full route geometry encoded as polyline6, turn-by-turn steps and disables route annotations. The public OSRM demo server is suitable only for basic testing: it uses the car profile and does not provide the road-exclusion capabilities expected by the app.
 
-For real use, configure an OSRM instance with appropriate regional data and profiles. CubiNav App can retrieve a `capabilities.json` document next to the configured OSRM endpoint. This advertises supported road classes, exclusion combinations and routing presets.
+For real use, configure an OSRM instance with appropriate regional data and profiles. CubiNav Connect can retrieve a `capabilities.json` document next to the configured OSRM endpoint. This advertises supported road classes, exclusion combinations and routing presets.
 
 Example capabilities document:
 
 ```json
+
 {
-  "classes": ["motorway", "toll", "ferry", "unpaved"],
-  "exclude": [["motorway"], ["toll"], ["motorway", "toll"]],
-  "presets": [
-    {
-      "id": "main",
-      "label": "Primary and secondary only",
-      "url": "http://host:5001"
-    }
-  ]
+
+  "classes": ["motorway", "toll", "ferry", "unpaved"],
+
+  "exclude": [["motorway"], ["toll"], ["motorway", "toll"]],
+
+  "presets": [
+
+    {
+
+      "id": "main",
+
+      "label": "Primary and secondary only",
+
+      "url": "http://host:5001"
+
+    }
+
+  ]
+
 }
+
 ```
 
 This is an example server configuration, not a bundled routing service. The server must actually support the advertised exclusions.
@@ -141,9 +195,13 @@ The Android manifest currently enables cleartext HTTP to support self-hosted OSR
 The navigation controller coordinates location, routing, route matching, BLE updates and trip state. Its main phases are:
 
 - **IDLE:** no active trip.
+
 - **ROUTING:** a route is being calculated.
+
 - **NAVIGATING:** following the active route.
+
 - **REROUTING:** calculating a replacement route after leaving the current route.
+
 - **ARRIVED:** destination reached.
 
 The app uses Android Fused Location Provider. Position fixes are projected into a local decimeter coordinate frame for the CubiNav protocol. The frame can be rebased during long trips to keep transmitted coordinates within the device's signed 32-bit range.
@@ -158,40 +216,64 @@ GPX replay feeds recorded track points through the navigation controller. It is 
 
 ## CubiNav BLE protocol
 
-CubiNav App implements **CubiNav BLE protocol v1**, matching the protocol definitions in the CubiNav device firmware at `CubiNav/src/protocol.h`.
+CubiNav Connect implements **CubiNav BLE protocol v1**, matching the protocol definitions in the CubiNav device firmware at `CubiNav/src/protocol.h`.
 
 - Custom GATT service with RX writes and TX notifications.
+
 - Requested ATT MTU: 247 bytes.
+
 - Little-endian binary message encoding.
+
 - Ordered BLE write queue and reconnect backoff.
+
 - Protocol handshake before navigation synchronization.
+
 - Route acknowledgements drive transfer flow control and gap recovery.
 
 ### Phone-to-device messages
 
 | Message | ID | Purpose |
+
 |---|---:|---|
+
 | HELLO | 0x01 | Start a session and negotiate protocol version |
+
 | REBASE | 0x03 | Shift the local route coordinate origin |
+
 | POSE | 0x10 | Send position, heading, speed and turn distance |
+
 | ROUTE_BEGIN | 0x20 | Start a route transfer |
+
 | ROUTE_CHUNK | 0x21 | Send delta-encoded route points |
+
 | ROUTE_COMMIT | 0x22 | Commit the transferred route |
+
 | ROUTE_CLEAR | 0x23 | Clear the device route |
+
 | MANEUVER | 0x30 | Send maneuver icon and street name |
+
 | CONFIG | 0x40 | Send display configuration |
+
 | NAV_STATE | 0x50 | Send navigation state |
+
 | OTA_BEGIN | 0x60 | Start firmware transfer |
+
 | OTA_CHUNK | 0x61 | Send firmware bytes |
+
 | OTA_END | 0x62 | Finish and verify firmware |
+
 | OTA_ABORT | 0x63 | Abort firmware transfer |
 
 ### Device-to-phone messages
 
 | Message | ID | Purpose |
+
 |---|---:|---|
+
 | HELLO_ACK | 0x81 | Protocol/firmware version, display dimensions and route capacity |
+
 | ROUTE_ACK | 0x82 | Route transfer status, expected point index and free slots |
+
 | OTA_ACK | 0x83 | Firmware transfer status, offset and flow-control information |
 
 All multi-byte protocol values are little-endian. Route coordinates use signed 32-bit decimeter values (east/north); route chunks encode point-to-point deltas as signed 16-bit pairs. Street labels are transliterated to ASCII and limited to 40 bytes to match the CubiNav font and protocol.
@@ -201,67 +283,111 @@ All multi-byte protocol values are little-endian. Route coordinates use signed 3
 The phone does not need to send the entire route at once. RouteStreamer maintains a rolling window of approximately **2 km ahead** of the current route position.
 
 - CubiNav reports available route-buffer slots in ROUTE_ACK.
+
 - The app sends only as many points as fit in the available capacity and BLE chunk limit.
+
 - A gap acknowledgement causes the app to resume from the device's expected point index.
+
 - The initial route is committed after at least 500 m has been uploaded, or when the route is complete.
+
 - More points are streamed as the navigation cursor advances.
 
 This keeps BLE traffic and device memory use bounded while supporting long routes.
 
 ## Firmware updates
 
-The Device tab in CubiNav App includes an OTA section. The updater checks the configured firmware README for the available version, downloads the firmware binary and transfers it to CubiNav using the OTA protocol.
+The Device tab in CubiNav Connect includes an OTA section. The updater checks the configured firmware README for the available version, downloads the firmware binary and transfers it to CubiNav using the OTA protocol.
 
-The update flow uses device acknowledgements and transfer-window information to track progress. CubiNav performs image validation and flash operations; CubiNav App reports the resulting update state.
+The update flow uses device acknowledgements and transfer-window information to track progress. CubiNav performs image validation and flash operations; CubiNav Connect reports the resulting update state.
 
 Configure the firmware binary URL and README/version URL in Settings. Keep the phone and CubiNav powered during an update; do not disconnect Bluetooth or close the app while firmware is being transferred.
 
 ## Project structure
 
 ```text
+
 CubiNav-App/
+
 ├── app/
-│   ├── build.gradle.kts
-│   └── src/
-│       ├── main/
-│       │   ├── AndroidManifest.xml
-│       │   ├── java/com/cubicl/cubinavapp/
-│       │   │   ├── MainActivity.kt       # App entry, permissions and Compose navigation
-│       │   │   ├── Screens.kt            # Device and settings screens
-│       │   │   ├── MapScreen.kt          # MapLibre map and destination UI
-│       │   │   ├── NavController.kt      # App-scoped navigation state machine
-│       │   │   ├── NavService.kt         # Foreground location/BLE service and notification
-│       │   │   ├── NavEngine.kt          # Route map matching
-│       │   │   ├── Route.kt              # OSRM parsing and maneuver mapping
-│       │   │   ├── RouteStreamer.kt      # Rolling route transfer and ACK flow control
-│       │   │   ├── Geo.kt                # Geodesic helpers and local coordinate projection
-│       │   │   ├── CoordParser.kt        # Coordinate input parsing
-│       │   │   ├── BleLink.kt            # BLE scan, pairing, connection and writes
-│       │   │   ├── Proto.kt              # Protocol v1 encoding and decoding
-│       │   │   ├── Net.kt                # HTTP, geocoding, OSRM and capabilities
-│       │   │   ├── Ota.kt                # Firmware update client
-│       │   │   ├── Prefs.kt              # Persistent settings and destinations
-│       │   │   └── Design+.kt            # Compose theme and UI components
-│       │   └── res/                      # Icons, notification layouts and resources
-│       └── test/                         # JVM unit tests
+
+│   ├── build.gradle.kts
+
+│   └── src/
+
+│       ├── main/
+
+│       │   ├── AndroidManifest.xml
+
+│       │   ├── java/com/cubicl/cubinavapp/
+
+│       │   │   ├── MainActivity.kt       # App entry, permissions and Compose navigation
+
+│       │   │   ├── Screens.kt            # Device and settings screens
+
+│       │   │   ├── MapScreen.kt          # MapLibre map and destination UI
+
+│       │   │   ├── NavController.kt      # App-scoped navigation state machine
+
+│       │   │   ├── NavService.kt         # Foreground location/BLE service and notification
+
+│       │   │   ├── NavEngine.kt          # Route map matching
+
+│       │   │   ├── Route.kt              # OSRM parsing and maneuver mapping
+
+│       │   │   ├── RouteStreamer.kt      # Rolling route transfer and ACK flow control
+
+│       │   │   ├── Geo.kt                # Geodesic helpers and local coordinate projection
+
+│       │   │   ├── CoordParser.kt        # Coordinate input parsing
+
+│       │   │   ├── BleLink.kt            # BLE scan, pairing, connection and writes
+
+│       │   │   ├── Proto.kt              # Protocol v1 encoding and decoding
+
+│       │   │   ├── Net.kt                # HTTP, geocoding, OSRM and capabilities
+
+│       │   │   ├── Ota.kt                # Firmware update client
+
+│       │   │   ├── Prefs.kt              # Persistent settings and destinations
+
+│       │   │   └── Design+.kt            # Compose theme and UI components
+
+│       │   └── res/                      # Icons, notification layouts and resources
+
+│       └── test/                         # JVM unit tests
+
 ├── gradle/wrapper/
+
 ├── build.gradle.kts
+
 ├── settings.gradle.kts
+
 ├── gradle.properties
+
 ├── gradlew
+
 └── gradlew.bat
+
 ```
 
 ## Main dependencies
 
 | Dependency | Purpose |
+
 |---|---|
+
 | Kotlin / Android Gradle Plugin | Android application and language toolchain |
+
 | Jetpack Compose + Material 3 | Declarative UI |
+
 | MapLibre Native Android | Interactive map rendering |
+
 | Google Play Services Location | Fused location updates |
+
 | OkHttp | HTTP networking |
+
 | Kotlin Coroutines | Asynchronous work and state coordination |
+
 | JUnit 4 | Unit tests |
 
 Dependency versions are maintained in `app/build.gradle.kts` and the root Gradle build files.
@@ -271,7 +397,9 @@ Dependency versions are maintained in `app/build.gradle.kts` and the root Gradle
 Run the JVM unit test suite:
 
 ```bash
+
 ./gradlew test
+
 ```
 
 The existing tests cover protocol byte encoding, coordinate parsing and geographic projection behavior. Hardware-dependent BLE, GPS, map rendering and OTA flows should additionally be tested on a physical device connected to CubiNav.

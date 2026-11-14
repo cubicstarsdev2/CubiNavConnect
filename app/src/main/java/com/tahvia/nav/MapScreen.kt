@@ -243,6 +243,7 @@ fun MapScreen() {
     val route by NavController.route.collectAsState()
     val phase by NavController.phase.collectAsState()
     val progress by NavController.progress.collectAsState()
+    val speedLimit by NavController.speedLimit.collectAsState()
     val banner by NavController.banner.collectAsState()
     val note by NavController.note.collectAsState()
     val results by NavController.results.collectAsState()
@@ -357,6 +358,7 @@ fun MapScreen() {
         // ---- top: turn banner or search, results, notices ----
         Column(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (navigating) TurnBanner(progress, phase, settings.imperial)
+            if (navigating && phase != Phase.ARRIVED && speedLimit > 0) SpeedSign(speedLimit, settings.imperial)
 
             if (!navigating || addingStop) {
                 Surface(shape = CircleShape, shadowElevation = 8.dp, tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {

@@ -15,6 +15,14 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 object Net {
+    var githubToken: () -> String = {
+        try {
+            NavController.prefs.settings.value.githubToken
+        } catch (_: Throwable) {
+            ""
+        }
+    }
+
     val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
@@ -22,8 +30,20 @@ object Net {
 
     class HttpException(val code: Int, val body: String) : IOException("HTTP $code")
 
+    fun request(url: String, userAgent: String): Request {
+        val builder = Request.Builder().url(url).header("User-Agent", userAgent)
+        val token = githubToken().trim()
+        if (token.isNotEmpty()) {
+            val host = try { url.toHttpUrl().host.lowercase() } catch (_: Throwable) { "" }
+            if (host.contains("github.com") || host.contains("githubusercontent.com")) {
+                builder.header("Authorization", "Bearer $token")
+            }
+        }
+        return builder.build()
+    }
+
     suspend fun get(url: String, userAgent: String): String = withContext(Dispatchers.IO) {
-        val req = Request.Builder().url(url).header("User-Agent", userAgent).build()
+        val req = request(url, userAgent)
         client.newCall(req).execute().use { r ->
             val body = r.body?.string().orEmpty()
             if (!r.isSuccessful) throw HttpException(r.code, body)
@@ -38,7 +58,7 @@ suspend fun Net.getBytes(
     maxBytes: Long,
     onProgress: (done: Long, total: Long) -> Unit = { _, _ -> },
 ): ByteArray = withContext(Dispatchers.IO) {
-    val req = Request.Builder().url(url).header("User-Agent", userAgent).build()
+    val req = Net.request(url, userAgent)
     client.newCall(req).execute().use { r ->
         if (!r.isSuccessful) throw Net.HttpException(r.code, "")
         val body = r.body ?: throw IOException("Empty response")
@@ -152,11 +172,12 @@ object Router {
         exclude: Set<String>,
         bearing: Int?,
         via: List<LatLon> = emptyList(),
+        withNodes: Boolean = false,
     ): Route {
         val coords = (listOf(from) + via + to).joinToString(";") { f(it.lon) + "," + f(it.lat) }
         val sb = StringBuilder(base.trimEnd('/'))
             .append("/route/v1/").append(profile).append('/').append(coords)
-            .append("?overview=full&geometries=polyline6&steps=true&annotations=false")
+            .append("?overview=full&geometries=polyline6&steps=true&annotations=").append(if (withNodes) "nodes" else "false")
         if (exclude.isNotEmpty()) sb.append("&exclude=").append(exclude.sorted().joinToString(","))
         if (bearing != null) sb.append("&bearings=").append(((bearing % 360) + 360) % 360).append(",45").append(";".repeat(via.size + 1))
         sb.append("&radiuses=100").append(";500".repeat(via.size)).append(";1000")
@@ -166,6 +187,6 @@ object Router {
             // OSRM answers NoRoute / NoSegment with HTTP 400 and a JSON body.
             if (e.code in 400..499 && e.body.trimStart().startsWith("{")) e.body else throw e
         }
-        return RouteParser.parse(body)
+        return RouteParser.parse(body, if (withNodes) SpeedDb::lookup else null)
     }
 }

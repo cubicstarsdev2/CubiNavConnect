@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.tahvia.nav.FirmwareUrlTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-14T00:25:21.439Z" hostname="TAHIEL-PC" time="0.025">
+  <properties/>
+  <testcase name="sanitizeRefsHeads" classname="com.tahvia.nav.FirmwareUrlTest" time="0.009"/>
+  <testcase name="defaultUrlsAreValidRawGithubUrls" classname="com.tahvia.nav.FirmwareUrlTest" time="0.016"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

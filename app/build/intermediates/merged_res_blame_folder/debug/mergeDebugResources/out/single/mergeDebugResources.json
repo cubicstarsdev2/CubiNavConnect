@@ -1,19 +1,11 @@
 [
     {
-        "merged": "com.tahvia.nav.app-debug-49:/drawable_ic_nav_done.xml.flat",
-        "source": "com.tahvia.nav.app-main-51:/drawable/ic_nav_done.xml"
-    },
-    {
-        "merged": "com.tahvia.nav.app-debug-49:/drawable_ic_nav_recalc.xml.flat",
-        "source": "com.tahvia.nav.app-main-51:/drawable/ic_nav_recalc.xml"
-    },
-    {
         "merged": "com.tahvia.nav.app-debug-49:/drawable_ic_nav_open.xml.flat",
         "source": "com.tahvia.nav.app-main-51:/drawable/ic_nav_open.xml"
     },
     {
-        "merged": "com.tahvia.nav.app-debug-49:/layout_notif_nav_big.xml.flat",
-        "source": "com.tahvia.nav.app-main-51:/layout/notif_nav_big.xml"
+        "merged": "com.tahvia.nav.app-debug-49:/raw_boot_frames.bin.flat",
+        "source": "com.tahvia.nav.app-main-51:/raw/boot_frames.bin"
     },
     {
         "merged": "com.tahvia.nav.app-debug-49:/drawable_ic_stat_nav.xml.flat",
@@ -24,12 +16,32 @@
         "source": "com.tahvia.nav.app-main-51:/drawable/nav_progress.xml"
     },
     {
+        "merged": "com.tahvia.nav.app-debug-49:/raw_speed_arg.bin.flat",
+        "source": "com.tahvia.nav.app-main-51:/raw/speed_arg.bin"
+    },
+    {
         "merged": "com.tahvia.nav.app-debug-49:/layout_notif_nav_small.xml.flat",
         "source": "com.tahvia.nav.app-main-51:/layout/notif_nav_small.xml"
     },
     {
         "merged": "com.tahvia.nav.app-debug-49:/drawable_nav_btn_stop.xml.flat",
         "source": "com.tahvia.nav.app-main-51:/drawable/nav_btn_stop.xml"
+    },
+    {
+        "merged": "com.tahvia.nav.app-debug-49:/drawable_ic_nav_done.xml.flat",
+        "source": "com.tahvia.nav.app-main-51:/drawable/ic_nav_done.xml"
+    },
+    {
+        "merged": "com.tahvia.nav.app-debug-49:/drawable_ic_nav_recalc.xml.flat",
+        "source": "com.tahvia.nav.app-main-51:/drawable/ic_nav_recalc.xml"
+    },
+    {
+        "merged": "com.tahvia.nav.app-debug-49:/raw_speed.bin.flat",
+        "source": "com.tahvia.nav.app-main-51:/raw/speed.bin"
+    },
+    {
+        "merged": "com.tahvia.nav.app-debug-49:/layout_notif_nav_big.xml.flat",
+        "source": "com.tahvia.nav.app-main-51:/layout/notif_nav_big.xml"
     },
     {
         "merged": "com.tahvia.nav.app-debug-49:/drawable_ic_nav_stop.xml.flat",

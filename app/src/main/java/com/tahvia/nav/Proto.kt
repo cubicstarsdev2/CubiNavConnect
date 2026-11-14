@@ -80,13 +80,14 @@ object Proto {
     fun rebase(dx: Int, dy: Int): ByteArray =
         buf(9).put(u8(REBASE)).putInt(dx).putInt(dy).array()
 
-    fun pose(x: Int, y: Int, headingDeci: Int, speedCms: Int, distToTurn: Int, valid: Boolean): ByteArray =
-        buf(16).apply {
+    fun pose(x: Int, y: Int, headingDeci: Int, speedCms: Int, distToTurn: Int, valid: Boolean, limitKmh: Int = 0): ByteArray =
+        buf(17).apply {
             put(u8(POSE)); putInt(x); putInt(y)
             putShort(u16(headingDeci.coerceIn(0, 3599)))
             putShort(u16(speedCms.coerceIn(0, 0xFFFF)))
             putShort(u16(distToTurn.coerceIn(0, 0xFFFF)))
             put(if (valid) 1 else 0)
+            put(u8(limitKmh.coerceIn(0, 250)))      // FW 1.2.0+: posted limit, 0 = unknown (device keeps the previous one)
         }.array()
 
     fun routeBegin(id: Int, startIdx: Int, x0: Int, y0: Int): ByteArray =

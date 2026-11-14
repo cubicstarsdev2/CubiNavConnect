@@ -254,7 +254,16 @@ object Ota {
         log("OTA: === $title ===")
     }
 
-    private fun exText(e: Throwable) = "${e.javaClass.simpleName}: ${e.message ?: "(no message)"}"
+    private fun exText(e: Throwable): String {
+        if (e is Net.HttpException && (e.code == 401 || e.code == 404)) {
+            val hasToken = NavController.prefs.settings.value.githubToken.isNotBlank()
+            return "GitHub answered HTTP ${e.code}. " + if (hasToken)
+                "Check the token (Contents: read) and that it can access this repo, branch and path."
+            else
+                "If the repo is private, add a GitHub token in Settings > Advanced > Firmware sources."
+        }
+        return "${e.javaClass.simpleName}: ${e.message ?: "(no message)"}"
+    }
     private fun ua() = NavController.prefs.settings.value.userAgent
 
     /**
@@ -296,7 +305,7 @@ object Ota {
         startTrace("force install .bin")
         log("OTA: device fw=${NavController.deviceFw.value} ble=${NavController.bleState.value} mtu=${NavController.link().mtu}")
         precondition()?.let { fail(it); return }
-        val url = NavController.prefs.settings.value.binUrl.trim()
+        val url = sanitizeFirmwareUrl(NavController.prefs.settings.value.binUrl)
         if (url.isEmpty()) { fail("Set the firmware .bin URL first."); return }
         job = scope.launch {
             try {
@@ -324,8 +333,8 @@ object Ota {
         if (busy) return
         startTrace("update from README")
         val st = NavController.prefs.settings.value
-        val readme = st.readmeUrl.trim()
-        val bin = st.binUrl.trim()
+        val readme = sanitizeFirmwareUrl(st.readmeUrl)
+        val bin = sanitizeFirmwareUrl(st.binUrl)
         val fw = NavController.deviceFw.value
         log("OTA: device fw=${if (fw >= 0) "${fmtVersion(fw)} (0x${fw.toString(16)})" else "unknown"} " +
                 "ble=${NavController.bleState.value} mtu=${NavController.link().mtu} nav=${NavController.phase.value}")

@@ -33,6 +33,9 @@ data class Settings(
     val presetId: String = "",
     val nominatimUrl: String = "https://nominatim.openstreetmap.org",
     val userAgent: String = "TahviaNav/1.0 (set-your-contact@example.com)",
+    val contactEmail: String = "",
+    // Read-only, repo-scoped token for the firmware download. Meant to ship in the app.
+    val githubToken: String = "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",
     val styleUrl: String = "osm",
     val imperial: Boolean = false,
     val headingUp: Boolean = true,
@@ -48,10 +51,35 @@ data class Settings(
     val capsUrl: String = "",          // empty = <osrmUrl>/capabilities.json
     val allRoads: Boolean = false,     // show every road toggle even without capabilities.json
     // README whose first "## x.y.z" line is the latest firmware version.
-    val readmeUrl: String = "https://raw.githubusercontent.com/cubicstarsdev2/TahVia/refs/heads/main/README.md",
+    val readmeUrl: String = "https://raw.githubusercontent.com/cubicstarsdev2/TahVia/main/README.md",
     // Direct link to the firmware image.
-    val binUrl: String = "https://raw.githubusercontent.com/cubicstarsdev2/TahVia/refs/heads/main/.pio/build/nodemcu-32s/firmware.bin",
+    val binUrl: String = "https://raw.githubusercontent.com/cubicstarsdev2/TahVia/main/.pio/build/nodemcu-32s/firmware.bin",
 )
+
+fun sanitizeFirmwareUrl(url: String): String {
+    val trimmed = url.trim()
+    if (trimmed.contains("raw.githubusercontent.com") && trimmed.contains("/refs/heads/")) {
+        return trimmed.replace("/refs/heads/", "/")
+    }
+    return trimmed
+}
+
+/** Contact address that goes into the User-Agent (Nominatim policy requires a real one). */
+object Contact {
+    private val EMAIL = Regex("^[^@\\s()]+@[^@\\s()]+\\.[^@\\s()]+$")
+    const val PLACEHOLDER = "set-your-contact@example.com"
+    fun isValid(email: String) = EMAIL.matches(email.trim()) && email.trim() != PLACEHOLDER
+    /** Same as Prefs.setContactEmail, for call sites written as Contact.setContactEmail(...). */
+    fun setContactEmail(email: String) = NavController.setContactEmail(email)
+    fun userAgent(email: String) = "TahviaNav/1.0 (${email.trim().ifEmpty { PLACEHOLDER }})"
+    /** The address inside "TahviaNav/1.0 (addr)", or "" if it is still the placeholder. */
+    fun emailOf(userAgent: String): String =
+        Regex("\\(([^)]*)\\)").find(userAgent)?.groupValues?.get(1)?.takeIf { it != PLACEHOLDER }.orEmpty()
+}
+
+/** Copy of these settings with the contact e-mail stored and the User-Agent rebuilt from it. */
+fun Settings.setContactEmail(email: String): Settings =
+    copy(contactEmail = email.trim(), userAgent = Contact.userAgent(email))
 
 class Prefs(ctx: Context) {
     private val sp = ctx.getSharedPreferences("tahvia", Context.MODE_PRIVATE)
@@ -68,6 +96,9 @@ class Prefs(ctx: Context) {
             presetId = sp.getString("presetId", d.presetId)!!,
             nominatimUrl = sp.getString("nominatimUrl", d.nominatimUrl)!!,
             userAgent = sp.getString("userAgent", d.userAgent)!!,
+            contactEmail = sp.getString("contactEmail", "")!!,
+            // an empty saved value falls back to the built-in default
+            githubToken = sp.getString("githubToken", "")!!.ifEmpty { d.githubToken },
             styleUrl = sp.getString("styleUrl", d.styleUrl)!!,
             imperial = sp.getBoolean("imperial", d.imperial),
             headingUp = sp.getBoolean("headingUp", d.headingUp),
@@ -84,9 +115,15 @@ class Prefs(ctx: Context) {
             advanced = sp.getBoolean("advanced", d.advanced),
             capsUrl = sp.getString("capsUrl", "")!!,
             allRoads = sp.getBoolean("allRoads", d.allRoads),
-            readmeUrl = sp.getString("readmeUrl", d.readmeUrl)!!,
-            // an earlier build saved the OWNER/REPO placeholder: replace it with the real default
-            binUrl = sp.getString("binUrl", d.binUrl)!!.let { if ("OWNER/REPO" in it) d.binUrl else it },
+            readmeUrl = sp.getString("readmeUrl", d.readmeUrl)!!.let {
+                val s = sanitizeFirmwareUrl(it)
+                if ("OWNER/REPO" in s || "/refs/heads/" in s) d.readmeUrl else s
+            },
+            // an earlier build saved the OWNER/REPO placeholder or bad refs/heads URL: replace with real default
+            binUrl = sp.getString("binUrl", d.binUrl)!!.let {
+                val s = sanitizeFirmwareUrl(it)
+                if ("OWNER/REPO" in s || "/refs/heads/" in s) d.binUrl else s
+            },
         )
     }
 
@@ -96,6 +133,7 @@ class Prefs(ctx: Context) {
         sp.edit()
             .putString("osrmUrl", n.osrmUrl).putString("profile", n.profile).putString("presetId", n.presetId)
             .putString("nominatimUrl", n.nominatimUrl).putString("userAgent", n.userAgent)
+            .putString("contactEmail", n.contactEmail).putString("githubToken", n.githubToken)
             .putString("styleUrl", n.styleUrl).putBoolean("imperial", n.imperial)
             .putBoolean("headingUp", n.headingUp).putBoolean("invert", n.invert)
             .putBoolean("showFps", n.showFps).putInt("zoom", n.zoom)
@@ -106,6 +144,9 @@ class Prefs(ctx: Context) {
             .putString("binUrl", n.binUrl).putString("readmeUrl", n.readmeUrl)
             .apply()
     }
+
+    /** Stores the contact address and puts it into the User-Agent that Nominatim/OSRM requests send. */
+    fun setContactEmail(email: String) = update { it.setContactEmail(email) }
 
     private fun loadDests(key: String): List<Dest> = try {
         val a = JSONArray(sp.getString(key, "[]"))

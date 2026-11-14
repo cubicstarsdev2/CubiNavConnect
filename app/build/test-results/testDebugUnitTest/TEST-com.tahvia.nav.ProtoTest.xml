@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.tahvia.nav.ProtoTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-14T01:26:12.174Z" hostname="TAHIEL-PC" time="0.062">
+  <properties/>
+  <testcase name="routeBeginAndChunk" classname="com.tahvia.nav.ProtoTest" time="0.008"/>
+  <testcase name="parseAcks" classname="com.tahvia.nav.ProtoTest" time="0.001"/>
+  <testcase name="maneuverIsNulTerminatedAndCapped" classname="com.tahvia.nav.ProtoTest" time="0.036"/>
+  <testcase name="helloConfigNavState" classname="com.tahvia.nav.ProtoTest" time="0.003"/>
+  <testcase name="poseGolden" classname="com.tahvia.nav.ProtoTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

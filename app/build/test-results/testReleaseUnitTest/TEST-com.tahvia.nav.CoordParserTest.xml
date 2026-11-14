@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.tahvia.nav.CoordParserTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-14T00:25:21.407Z" hostname="TAHIEL-PC" time="0.028">
+  <properties/>
+  <testcase name="swappedAndInvalidAndAddress" classname="com.tahvia.nav.CoordParserTest" time="0.019"/>
+  <testcase name="hemisphereAndDms" classname="com.tahvia.nav.CoordParserTest" time="0.002"/>
+  <testcase name="decimal" classname="com.tahvia.nav.CoordParserTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

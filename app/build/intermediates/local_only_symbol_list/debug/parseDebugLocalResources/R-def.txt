@@ -28,3 +28,6 @@ id w_recalc
 id w_stop
 layout notif_nav_big
 layout notif_nav_small
+raw boot_frames
+raw speed
+raw speed_arg

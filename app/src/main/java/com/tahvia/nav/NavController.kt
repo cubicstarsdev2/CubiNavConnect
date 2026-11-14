@@ -70,6 +70,7 @@ data class NavNotif(
     val dest: String,
     val hasProgress: Boolean,
     val totalM: Double,
+    val limitKmh: Int = 0,
 )
 
 /**
@@ -154,6 +155,10 @@ object NavController : BleListener {
 
     // ---- internals ------------------------------------------------------------------------------
     private var engine: NavEngine? = null
+    private var heldLimit = 0                         // km/h, kept for a while when the data has a gap
+    private var heldLimitAlong = 0.0
+    private val _speedLimit = MutableStateFlow(0)
+    val speedLimit = _speedLimit.asStateFlow()
     private var projector: Projector? = null
     private var routeId = 0
     private var helloAcked = false
@@ -226,11 +231,11 @@ object NavController : BleListener {
             "$nav  |  device: ${b.name.lowercase()}"
         }.stateIn(scope, SharingStarted.Eagerly, "TahviaNav")
 
-        notif = combine(_phase, ble.state, _progress, _dest, _route) { p, b, pr, d, r ->
+        notif = combine(_phase, ble.state, _progress, _dest, combine(_route, speedLimit) { r, lim -> r to lim }) { p, b, pr, d, (r, lim) ->
             NavNotif(p, b, pr?.remainingM ?: 0.0, pr?.remainingS ?: 0.0, pr?.distToTurn,
-                pr?.icon ?: 1, pr?.street.orEmpty(), d?.label.orEmpty(), pr != null, r?.totalM ?: 0.0)
+                pr?.icon ?: 1, pr?.street.orEmpty(), d?.label.orEmpty(), pr != null, r?.totalM ?: 0.0, lim)
         }.stateIn(scope, SharingStarted.Eagerly,
-            NavNotif(Phase.IDLE, BleState.IDLE, 0.0, 0.0, null, 1, "", "", false, 0.0))
+            NavNotif(Phase.IDLE, BleState.IDLE, 0.0, 0.0, null, 1, "", "", false, 0.0, 0))
 
         scope.launch {
             combine(_phase, ble.state) { p, s -> p != Phase.IDLE || s != BleState.IDLE && s != BleState.OFF }
@@ -377,6 +382,11 @@ object NavController : BleListener {
         pushConfig()
         val s = prefs.settings.value
         if (capsKeyOf(s) != capsUrl) refreshCapabilities()
+    }
+
+    fun setContactEmail(email: String) {
+        prefs.setContactEmail(email)
+        onSettingsChanged()
     }
 
     fun refreshCapabilities() {
@@ -646,7 +656,8 @@ object NavController : BleListener {
         val base = preset?.url ?: s.osrmUrl
         val ex = if (preset != null) emptySet() else excludedFor(s, c)
         reqWps = _waypoints.value
-        return Router.route(base, s.profile, s.userAgent, from, to, ex, bearing, reqWps.map { LatLon(it.lat, it.lon) })
+        SpeedDb.ensureLoaded(app)
+        return Router.route(base, s.profile, s.userAgent, from, to, ex, bearing, reqWps.map { LatLon(it.lat, it.lon) }, withNodes = SpeedDb.available)
     }
 
     // ---- navigation lifecycle ---------------------------------------------------------------------------
@@ -692,6 +703,7 @@ object NavController : BleListener {
         _route.value = r
         engine = NavEngine(r)
         currentAlong = 0.0
+        heldLimit = 0; heldLimitAlong = 0.0; _speedLimit.value = 0
         viaPassed = 0
         routeWps = reqWps
         _planDirty.value = false
@@ -721,6 +733,7 @@ object NavController : BleListener {
         _snapped.value = null
         _destSnapped.value = null
         engine = null
+        heldLimit = 0; _speedLimit.value = 0
         rerouting = false
         backoffIdx = 0
         lastManeuverKey = null
@@ -757,6 +770,12 @@ object NavController : BleListener {
         currentAlong = m.along
         _snapped.value = LatLon(lat, lon)
         _heading.value = heading
+
+        // posted speed limit of the matched segment; kept for 500 m when the data has a gap
+        val segLim = r.limits?.let { it[m.seg.coerceIn(0, it.size - 1)].toInt() and 0xFF } ?: 0
+        if (segLim > 0) { heldLimit = segLim; heldLimitAlong = m.along }
+        else if (m.along - heldLimitAlong > 500.0) heldLimit = 0
+        if (_speedLimit.value != heldLimit) _speedLimit.value = heldLimit
 
         // waypoints: once we are past one, drop it so a later reroute does not send us back
         val vias = r.steps.filter { it.type == "via" }
@@ -818,7 +837,7 @@ object NavController : BleListener {
         val hdgDeci = (((heading * 10).roundToInt() % 3600) + 3600) % 3600
         val speedCms = if (f.speed < 0.5f) 0 else (f.speed * 100).roundToInt()
         if (helloAcked && !_phoneOnly.value) {
-            val pb = Proto.pose(x, y, hdgDeci, speedCms, dist ?: 0xFFFF, true)
+            val pb = Proto.pose(x, y, hdgDeci, speedCms, dist ?: 0xFFFF, true, heldLimit)
             lastPoseBytes = pb
             lastPoseSentAt = now
             ble.sendPose(pb)

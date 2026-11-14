@@ -26,6 +26,8 @@ class Route(
     val steps: List<Step>,
     val durationS: Double,
     val snapDestM: Double,
+    /** Speed limit in km/h for the segment starting at point i (0 = unknown). Null = no data. */
+    val limits: ByteArray? = null,
 ) {
     val n get() = lat.size
     val totalM get() = cum[n - 1]
@@ -67,7 +69,7 @@ object RouteParser {
     private const val SIMPLIFY_TOL_M = 1.5
     private const val MAX_SEG_M = 3000.0
 
-    fun parse(json: String): Route {
+    fun parse(json: String, limitOf: ((Long) -> Int)? = null): Route {
         val root = JSONObject(json)
         when (val code = root.optString("code")) {
             "Ok" -> {}
@@ -85,8 +87,14 @@ object RouteParser {
         class Raw(val type: String, val mod: String?, val name: String, val lat: Double, val lon: Double)
         val raws = ArrayList<Raw>()
         val legs = rt.getJSONArray("legs")
+        val nodeIds = ArrayList<Long>()
+        var nodesOk = limitOf != null
         for (li in 0 until legs.length()) {
-            val steps = legs.getJSONObject(li).getJSONArray("steps")
+            val leg = legs.getJSONObject(li)
+            // annotation.nodes = OSM node id of every geometry vertex of the leg; the first vertex of a later leg repeats the last of the previous one
+            val nd = leg.optJSONObject("annotation")?.optJSONArray("nodes")
+            if (nd == null) nodesOk = false else for (q in (if (li == 0) 0 else 1) until nd.length()) nodeIds.add(nd.getLong(q))
+            val steps = leg.getJSONArray("steps")
             for (si in 0 until steps.length()) {
                 val s = steps.getJSONObject(si)
                 val m = s.getJSONObject("maneuver")
@@ -132,8 +140,10 @@ object RouteParser {
         val oLon = ArrayList<Double>()
         val newIdx = IntArray(nFull) { -1 }
         var last = -1
+        val kept = ArrayList<Int>()
         for (i in 0 until nFull) {
             if (!keep[i]) continue
+            kept.add(i)
             if (last >= 0) {
                 val d = Geo.distance(fl[last], fo[last], fl[i], fo[i])
                 if (d > MAX_SEG_M) {
@@ -162,6 +172,22 @@ object RouteParser {
         }
         val wps = root.optJSONArray("waypoints")
         val snap = wps?.optJSONObject(wps.length() - 1)?.optDouble("distance", 0.0) ?: 0.0
-        return Route(lat, lon, cum, steps, rt.optDouble("duration", 0.0), snap)
+        // ---- speed limit per simplified segment: most common known limit among the full-resolution vertices it spans ----
+        var limits: ByteArray? = null
+        if (nodesOk && limitOf != null && nodeIds.size == nFull && kept.size >= 2) {
+            val vl = IntArray(nFull) { limitOf(nodeIds[it]) }
+            val out = ByteArray(lat.size)
+            for (q in 0 until kept.size - 1) {
+                val a = kept[q]
+                val b = kept[q + 1]
+                val seen = HashMap<Int, Int>()
+                for (j in a until b) if (vl[j] > 0) seen[vl[j]] = (seen[vl[j]] ?: 0) + 1
+                val v = seen.maxByOrNull { it.value }?.key ?: vl[b]
+                for (idx in newIdx[a] until newIdx[b]) out[idx] = v.toByte()
+            }
+            out[out.size - 1] = out[maxOf(0, out.size - 2)]
+            limits = out
+        }
+        return Route(lat, lon, cum, steps, rt.optDouble("duration", 0.0), snap, limits)
     }
 }

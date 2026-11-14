@@ -210,6 +210,7 @@ class NavService : Service() {
 
         val sub = buildString {
             if (moving && n.hasProgress && n.remainingS > 0) append("ETA ").append(etaText(n)).append("  ·  ")
+            if (moving && n.limitKmh > 0) append("Limit ").append(limitValue(n.limitKmh, imperial)).append("  ·  ")
             append("Display ").append(bleLabel(n.ble).lowercase())
         }
 

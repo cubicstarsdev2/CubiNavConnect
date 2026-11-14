@@ -233,6 +233,18 @@ fun SettingsScreen() {
             Slider(value = s.maxAccuracy.toFloat(), onValueChange = { v -> prefs.update { it.copy(maxAccuracy = v.toInt()) } }, valueRange = 10f..100f)
         }
 
+        Section("Contact", TIcons.Info) {
+            var email by remember(s.contactEmail) { mutableStateOf(s.contactEmail) }
+            val ok = Contact.isValid(email)
+            OutlinedTextField(
+                value = email,
+                onValueChange = { v -> email = v; if (Contact.isValid(v)) NavController.setContactEmail(v) },
+                label = { Text("E-mail (sent in the User-Agent)") }, singleLine = true,
+                isError = !ok, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium,
+                supportingText = { if (!ok) Text("Enter a valid e-mail address") },
+            )
+        }
+
         Section("About", TIcons.Info) {
             Text(
                 "Map data © OpenStreetMap contributors (ODbL). Destinations are sent only to the geocoder and router configured in Advanced. Recents and favorites stay on this phone.",
@@ -285,6 +297,16 @@ fun SettingsScreen() {
             Section("Firmware sources", TIcons.Refresh) {
                 UrlField("README URL (first \"## x.y.z\" line = latest version)", s.readmeUrl) { v -> prefs.update { it.copy(readmeUrl = v) } }
                 UrlField("Firmware .bin URL (raw.githubusercontent.com)", s.binUrl) { v -> prefs.update { it.copy(binUrl = v) } }
+                OutlinedTextField(
+                    value = s.githubToken, onValueChange = { v -> prefs.update { it.copy(githubToken = v.trim()) } },
+                    label = { Text("GitHub token (private repos)") }, singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium,
+                )
+                Text(
+                    "Fine-grained personal access token with read-only \"Contents\" access to the firmware repo. Stored encrypted on this phone and sent only to github.com / raw.githubusercontent.com. Leave empty for a public repo.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             Section("Developer", TIcons.Build) {

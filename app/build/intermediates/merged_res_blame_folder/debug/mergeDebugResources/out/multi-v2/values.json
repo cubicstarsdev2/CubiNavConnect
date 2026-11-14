@@ -110,23 +110,6 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\Tahiel\\Downloads\\TahviaNav\\TahviaNav\\app\\src\\main\\res\\values\\nav_colors.xml",
-                    "from": {
-                        "startLines": "2,4,3,5",
-                        "startColumns": "4,4,4,4",
-                        "startOffsets": "55,152,102,197",
-                        "endColumns": "46,44,49,45",
-                        "endOffsets": "97,192,147,238"
-                    },
-                    "to": {
-                        "startLines": "20,21,22,23",
-                        "startColumns": "4,4,4,4",
-                        "startOffsets": "1447,1494,1539,1589",
-                        "endColumns": "46,44,49,45",
-                        "endOffsets": "1489,1534,1584,1630"
-                    }
-                },
-                {
                     "source": "C:\\Users\\Tahiel\\.gradle\\caches\\9.6.0\\transforms\\488fcd6501c8567a961fb433d3090431\\transformed\\ui-graphics-release\\res\\values\\values.xml",
                     "from": {
                         "startLines": "2",
@@ -249,6 +232,23 @@
                         "startOffsets": "8760",
                         "endColumns": "82",
                         "endOffsets": "8838"
+                    }
+                },
+                {
+                    "source": "D:\\TahviaNav\\app\\src\\main\\res\\values\\nav_colors.xml",
+                    "from": {
+                        "startLines": "2,4,3,5",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,152,102,197",
+                        "endColumns": "46,44,49,45",
+                        "endOffsets": "97,192,147,238"
+                    },
+                    "to": {
+                        "startLines": "20,21,22,23",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "1447,1494,1539,1589",
+                        "endColumns": "46,44,49,45",
+                        "endOffsets": "1489,1534,1584,1630"
                     }
                 },
                 {

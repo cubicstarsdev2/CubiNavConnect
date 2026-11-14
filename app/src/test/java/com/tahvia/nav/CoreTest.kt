@@ -11,8 +11,8 @@ class ProtoTest {
     @Test fun poseGolden() {
         // x=1 y=-1 heading=900 (90.0 deg) speed=500 cm/s dist=250 m valid
         val got = Proto.pose(1, -1, 900, 500, 250, true)
-        assertArrayEquals(b(0x10, 1, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0x84, 0x03, 0xF4, 0x01, 0xFA, 0x00, 1), got)
-        assertEquals(16, got.size)
+        assertArrayEquals(b(0x10, 1, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0x84, 0x03, 0xF4, 0x01, 0xFA, 0x00, 1, 0), got)
+        assertEquals(17, got.size)
     }
 
     @Test fun helloConfigNavState() {
@@ -94,3 +94,32 @@ class GeoTest {
         assertTrue(!keep[1] && !keep[3])
     }
 }
+
+class FirmwareUrlTest {
+    @Test fun sanitizeRefsHeads() {
+        val input = "https://raw.githubusercontent.com/cubicstarsdev2/TahVia/refs/heads/main/README.md"
+        val expected = "https://raw.githubusercontent.com/cubicstarsdev2/TahVia/main/README.md"
+        assertEquals(expected, sanitizeFirmwareUrl(input))
+    }
+
+    @Test fun defaultUrlsAreValidRawGithubUrls() {
+        val settings = Settings()
+        assertTrue(!settings.readmeUrl.contains("refs/heads"))
+        assertTrue(!settings.binUrl.contains("refs/heads"))
+    }
+}
+
+class NetTest {
+    @Test fun githubAuthorizationHeaderAttachedWhenTokenSet() {
+        Net.githubToken = { "my_secret_token" }
+        val req = Net.request("https://raw.githubusercontent.com/cubicstarsdev2/TahVia/main/README.md", "ua")
+        assertEquals("Bearer my_secret_token", req.header("Authorization"))
+    }
+
+    @Test fun githubAuthorizationHeaderNotAttachedToOtherHosts() {
+        Net.githubToken = { "my_secret_token" }
+        val req = Net.request("https://router.project-osrm.org/route/v1/driving", "ua")
+        assertEquals(null, req.header("Authorization"))
+    }
+}
+

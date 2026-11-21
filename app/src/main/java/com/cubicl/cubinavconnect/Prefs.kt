@@ -36,8 +36,6 @@ data class Settings(
     val nominatimUrl: String = "https://nominatim.openstreetmap.org",
     val userAgent: String = "CubiNav/1.0 (set-your-contact@example.com)",
     val contactEmail: String = "",
-    // Read-only, repo-scoped token for the firmware download. Meant to ship in the app.
-    val githubToken: String = "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",
     val styleUrl: String = "osm",
     val imperial: Boolean = false,
     val headingUp: Boolean = true,
@@ -88,6 +86,11 @@ fun Settings.setContactEmail(email: String): Settings =
 class Prefs(ctx: Context) {
     private val sp = ctx.getSharedPreferences("cubinav", Context.MODE_PRIVATE)
 
+    init {
+        // the repo is public now, so the firmware download needs no token; drop any one saved by an older build
+        sp.edit().remove("githubToken").apply()
+    }
+
     val settings = MutableStateFlow(load())
     val recents = MutableStateFlow(loadDests("recents"))
     val favorites = MutableStateFlow(loadDests("favorites"))
@@ -101,8 +104,6 @@ class Prefs(ctx: Context) {
             nominatimUrl = sp.getString("nominatimUrl", d.nominatimUrl)!!,
             userAgent = sp.getString("userAgent", d.userAgent)!!,
             contactEmail = sp.getString("contactEmail", "")!!,
-            // an empty saved value falls back to the built-in default
-            githubToken = sp.getString("githubToken", "")!!.ifEmpty { d.githubToken },
             styleUrl = sp.getString("styleUrl", d.styleUrl)!!,
             imperial = sp.getBoolean("imperial", d.imperial),
             headingUp = sp.getBoolean("headingUp", d.headingUp),
@@ -139,7 +140,7 @@ class Prefs(ctx: Context) {
         sp.edit()
             .putString("osrmUrl", n.osrmUrl).putString("profile", n.profile).putString("presetId", n.presetId)
             .putString("nominatimUrl", n.nominatimUrl).putString("userAgent", n.userAgent)
-            .putString("contactEmail", n.contactEmail).putString("githubToken", n.githubToken)
+            .putString("contactEmail", n.contactEmail)
             .putString("styleUrl", n.styleUrl).putBoolean("imperial", n.imperial)
             .putBoolean("headingUp", n.headingUp).putBoolean("invert", n.invert)
             .putBoolean("showFps", n.showFps).putInt("zoom", n.zoom).putInt("language", n.language).putBoolean("onboardSkipped", n.onboardSkipped)

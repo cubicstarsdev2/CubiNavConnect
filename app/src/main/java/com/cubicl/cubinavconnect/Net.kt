@@ -15,14 +15,6 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 object Net {
-    var githubToken: () -> String = {
-        try {
-            NavController.prefs.settings.value.githubToken
-        } catch (_: Throwable) {
-            ""
-        }
-    }
-
     val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
@@ -30,17 +22,8 @@ object Net {
 
     class HttpException(val code: Int, val body: String) : IOException("HTTP $code")
 
-    fun request(url: String, userAgent: String): Request {
-        val builder = Request.Builder().url(url).header("User-Agent", userAgent)
-        val token = githubToken().trim()
-        if (token.isNotEmpty()) {
-            val host = try { url.toHttpUrl().host.lowercase() } catch (_: Throwable) { "" }
-            if (host.contains("github.com") || host.contains("githubusercontent.com")) {
-                builder.header("Authorization", "Bearer $token")
-            }
-        }
-        return builder.build()
-    }
+    fun request(url: String, userAgent: String): Request =
+        Request.Builder().url(url).header("User-Agent", userAgent).build()
 
     suspend fun get(url: String, userAgent: String): String = withContext(Dispatchers.IO) {
         val req = request(url, userAgent)

@@ -256,8 +256,7 @@ object Ota {
 
     private fun exText(e: Throwable): String {
         if (e is Net.HttpException && (e.code == 401 || e.code == 404)) {
-            val hasToken = NavController.prefs.settings.value.githubToken.isNotBlank()
-            return L.s(if (hasToken) R.string.ota_err_http_token else R.string.ota_err_http_notoken, e.code)
+            return L.s(R.string.ota_err_http_notoken, e.code)
         }
         return "${e.javaClass.simpleName}: ${e.message ?: L.s(R.string.ota_no_message)}"
     }
@@ -268,20 +267,28 @@ object Ota {
      * (minor and patch 0..15). 1.0.0 == 0x0100, so firmware that reports 0x0100 keeps working.
      * Set FW_VERSION in firmware/protocol.h to the same code on every release (1.2.3 -> 0x0123).
      */
-    fun fmtVersion(code: Int) = "${(code shr 8) and 0xFF}.${(code shr 4) and 0xF}.${code and 0xF}"
+    fun fmtVersion(code: Int): String {
+        val n = (code shr 16) and 0x1F            // optional trailing letter: 1 = A ... 26 = Z, 0 = none
+        val letter = if (n in 1..26) ('A' + (n - 1)).toString() else ""
+        return "${(code shr 8) and 0xFF}.${(code shr 4) and 0xF}.${code and 0xF}$letter"
+    }
 
-    private val README_VERSION = Regex("""^##\s*v?(\d+)\.(\d+)\.(\d+)\s*$""")
+    private val README_VERSION = Regex("""^##\s*v?(\d+)\.(\d+)\.(\d+)([A-Za-z]?)\s*$""")
 
-    /** First README line of the form "## 1.2.3" ("##1.2.3" also works) as a device version code, or null. */
+    /**
+     * First README line of the form "## 1.2.3" or "## 1.2.3R" ("##1.2.3" also works) as a device version code, or null.
+     * A trailing letter (case-insensitive) is stored in bits 16..20: 1.0.0R == 0x120100.
+     */
     fun parseReadmeVersion(text: String): Int? {
         for (line in text.removePrefix("\uFEFF").lineSequence()) {
             val m = README_VERSION.matchEntire(line.trim()) ?: continue
-            val (a, b, c) = m.destructured
+            val (a, b, c, l) = m.destructured
             val major = a.toIntOrNull() ?: return null
             val minor = b.toIntOrNull() ?: return null
             val patch = c.toIntOrNull() ?: return null
             if (major > 255 || minor > 15 || patch > 15) return null
-            return (major shl 8) or (minor shl 4) or patch
+            val letter = if (l.isEmpty()) 0 else l[0].uppercaseChar() - 'A' + 1
+            return (letter shl 16) or (major shl 8) or (minor shl 4) or patch
         }
         return null
     }

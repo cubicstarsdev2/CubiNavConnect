@@ -344,16 +344,6 @@ fun SettingsScreen() {
                 Section(stringResource(R.string.adv_fw_sources), TIcons.Refresh) {
                     UrlField(stringResource(R.string.adv_readme_url), s.readmeUrl) { v -> prefs.update { it.copy(readmeUrl = v) } }
                     UrlField(stringResource(R.string.adv_bin_url), s.binUrl) { v -> prefs.update { it.copy(binUrl = v) } }
-                    OutlinedTextField(
-                        value = s.githubToken, onValueChange = { v -> prefs.update { it.copy(githubToken = v.trim()) } },
-                        label = { Text(stringResource(R.string.adv_token)) }, singleLine = true,
-                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium,
-                    )
-                    Text(
-                        stringResource(R.string.adv_token_note),
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
 
                 Section(stringResource(R.string.adv_developer), TIcons.Build) {
@@ -437,4 +427,4 @@ private fun DebugPanel() {
             Text(it, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
         }
     }
-}
+}

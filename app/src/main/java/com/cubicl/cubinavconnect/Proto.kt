@@ -3,7 +3,11 @@ package com.cubicl.cubinavconnect
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-/** [configured]: HELLO_ACK byte 10 (optional, FW 1.5.0+): 0 = first-time setup not done, 1 = configured. Older firmware omits it = configured. */
+/**
+ * [fw]: version code = (letter shl 16) or major/minor/patch u16 (see Ota.fmtVersion). The letter comes from HELLO_ACK byte 11
+ * (optional, 0 = none, 1 = A ... 26 = Z); firmware without that byte reports no letter.
+ * [configured]: HELLO_ACK byte 10 (optional, FW 1.5.0+): 0 = first-time setup not done, 1 = configured. Older firmware omits it = configured.
+ */
 data class HelloAck(val proto: Int, val fw: Int, val screenW: Int, val screenH: Int, val maxPoints: Int, val configured: Boolean = true)
 data class SetupAck(val status: Int)
 data class RouteAck(val routeId: Int, val status: Int, val expectedIdx: Int, val freeSlots: Int)
@@ -145,9 +149,14 @@ object Proto {
         return SetupAck(d[1].toInt() and 0xFF)
     }
 
+    /**
+     * The version field is a u16 (major/minor/patch). The letter (bits 16+ of [version]) travels in an optional trailing byte
+     * (0 = none, 1 = A ... 26 = Z) so the device can show "1.0.0D -> 1.0.0R". Firmware without it ignores the extra byte.
+     */
     fun otaBegin(size: Long, md5: ByteArray, version: Int): ByteArray {
         require(md5.size == 16)
-        return buf(23).put(u8(OTA_BEGIN)).putInt(size.toInt()).put(md5).putShort(u16(version)).array()
+        val letter = ((version shr 16) and 0xFF).let { if (it in 1..26) it else 0 }
+        return buf(24).put(u8(OTA_BEGIN)).putInt(size.toInt()).put(md5).putShort(u16(version)).put(u8(letter)).array()
     }
 
     fun otaChunk(offset: Long, data: ByteArray, from: Int, len: Int): ByteArray {
@@ -182,7 +191,9 @@ object Proto {
         val h = b.short.toInt() and 0xFFFF
         val mp = b.short.toInt() and 0xFFFF
         val configured = if (d.size >= 11) d[10].toInt() != 0 else true
-        return HelloAck(proto, fw, w, h, mp, configured)
+        // optional byte 11: version letter (1 = A ... 26 = Z); older firmware omits it
+        val letter = if (d.size >= 12) (d[11].toInt() and 0xFF).takeIf { it in 1..26 } ?: 0 else 0
+        return HelloAck(proto, fw or (letter shl 16), w, h, mp, configured)
     }
 
     fun parseRouteAck(d: ByteArray): RouteAck? {

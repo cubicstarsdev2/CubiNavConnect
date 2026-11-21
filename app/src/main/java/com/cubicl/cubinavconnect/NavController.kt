@@ -208,6 +208,142 @@ object NavController : BleListener {
     private var simSeg = 0
     private var simFree = false                       // driving straight, off the route (to test rerouting)
 
+    // ---- first-time setup (SETUP_CONFIG / SETUP_ACK) -----------------------------------------------
+    /** From HELLO_ACK: null = unknown / not connected. false = the device waits for the setup wizard. */
+    private val _deviceConfigured = MutableStateFlow<Boolean?>(null)
+    val deviceConfigured = _deviceConfigured.asStateFlow()
+    private val _setup = MutableStateFlow(SetupUi())
+    val setup = _setup.asStateFlow()
+    private val _setupStep = MutableStateFlow(0)
+    val setupStep = _setupStep.asStateFlow()
+    private val _setupDraft = MutableStateFlow(SetupDraft.from(Settings()))
+    val setupDraft = _setupDraft.asStateFlow()
+    private var setupJob: Job? = null
+    private var setupSaved = false          // the device ACKed SETUP_CONFIG with status OK
+
+    fun skipOnboarding() = prefs.update { it.copy(onboardSkipped = true) }
+
+    /** Opens the wizard from the Device tab (also lets you test it before the firmware reports "not configured"). */
+    fun beginSetupManually() {
+        _setup.value = SetupUi()
+        _setupStep.value = 0
+        _deviceConfigured.value = false
+    }
+
+    /** Settings language change. With [alsoDevice] the display gets it too: SETUP_CONFIG is re-sent with the committed prefs (it restarts). */
+    fun changeLanguage(id: Int, alsoDevice: Boolean) {
+        if (!Lang.valid(id)) return
+        prefs.update { it.copy(language = id) }
+        if (alsoDevice && ble.state.value == BleState.CONNECTED && _deviceConfigured.value == true) {
+            _setupDraft.value = SetupDraft.from(prefs.settings.value)
+            setupSaved = false
+            sendSetup(_setupDraft.value)
+        }
+    }
+
+    fun setSetupStep(i: Int) { _setupStep.value = i.coerceIn(0, 2) }
+    fun updateDraft(f: (SetupDraft) -> SetupDraft) { _setupDraft.value = f(_setupDraft.value) }
+
+    /** Language applies to the app immediately (the caller recreates the activity) and to the device when setup is sent. */
+    fun setSetupLanguage(id: Int) {
+        if (!Lang.valid(id)) return
+        updateDraft { it.copy(language = id) }
+        prefs.update { it.copy(language = id) }
+    }
+
+    /** Leave the wizard without configuring: drop the link, the device stays in its waiting state. */
+    fun exitSetup() {
+        cancelSetupTimeout()
+        _setup.value = SetupUi()
+        _setupStep.value = 0
+        _deviceConfigured.value = null
+        disconnectDevice()
+    }
+
+    fun backToSetupSettings() {
+        cancelSetupTimeout()
+        setupSaved = false
+        _setup.value = SetupUi()
+        _setupStep.value = 2
+    }
+
+    /** Wizard "Finish setup": (1) keep the choices locally, (2) send them, (3) wait for the device's ACK. */
+    fun startSetupTransfer() {
+        val d = _setupDraft.value
+        prefs.update {
+            it.copy(language = d.language, imperial = d.imperial, headingUp = d.headingUp,
+                invert = d.invert, showFps = d.showFps, zoom = d.zoom)
+        }
+        setupSaved = false
+        sendSetup(d)
+    }
+
+    private fun sendSetup(d: SetupDraft) {
+        if (ble.state.value != BleState.CONNECTED) { failSetup(SetupError.DISCONNECTED); return }
+        _setup.value = SetupUi(SetupState.SENDING)
+        val pkt = Proto.setupConfig(d.language, d.flags(), d.zoom)
+        log("> SETUP_CONFIG lang=${d.language} flags=${d.flags()} zoom=${d.zoom}")
+        ble.send(pkt)                                           // a finished BLE write is NOT proof it was saved
+        _setup.value = SetupUi(SetupState.WAITING_FOR_ACK)
+        armSetupTimeout(8_000, SetupError.TIMEOUT)
+    }
+
+    private fun onSetupAck(a: SetupAck) {
+        log("< SETUP_ACK status=${a.status}")
+        if (_setup.value.state != SetupState.WAITING_FOR_ACK) return
+        if (a.status == Proto.SETUP_OK) {
+            setupSaved = true                                   // device verified the NVS write; it restarts now
+            _setup.value = SetupUi(SetupState.DEVICE_RESTARTING)
+            armSetupTimeout(45_000, SetupError.RECONNECT_TIMEOUT)
+        } else {
+            failSetup(when (a.status) {
+                Proto.SETUP_E_VERSION -> SetupError.VERSION
+                Proto.SETUP_E_LANGUAGE -> SetupError.LANGUAGE
+                Proto.SETUP_E_SETTINGS -> SetupError.SETTINGS
+                else -> SetupError.NVS
+            })
+        }
+    }
+
+    fun retrySetup() {
+        if (setupSaved) {                                       // already saved on the device: only reconnect
+            _setup.value = SetupUi(SetupState.RECONNECTING)
+            armSetupTimeout(45_000, SetupError.RECONNECT_TIMEOUT)
+            val a = prefs.settings.value.deviceAddress
+            if (a.isNotEmpty()) ble.connect(a)
+        } else {
+            sendSetup(_setupDraft.value)
+        }
+    }
+
+    /** Last step of the flow: the device restarted, reconnected and reported itself configured. */
+    fun finishSetupFlow() {
+        _setup.value = SetupUi()
+        _setupStep.value = 0
+    }
+
+    private fun failSetup(e: SetupError) {
+        cancelSetupTimeout()
+        _setup.value = SetupUi(SetupState.FAILED, e)
+    }
+
+    private fun armSetupTimeout(ms: Long, e: SetupError) {
+        setupJob?.cancel()
+        setupJob = scope.launch { delay(ms); failSetup(e) }
+    }
+
+    private fun cancelSetupTimeout() { setupJob?.cancel(); setupJob = null }
+
+    private fun onLinkStateForSetup(st: BleState) {
+        if (st == BleState.CONNECTED) return
+        _deviceConfigured.value = null
+        when (_setup.value.state) {
+            SetupState.SENDING, SetupState.WAITING_FOR_ACK -> failSetup(SetupError.DISCONNECTED)   // keep the draft, allow retry
+            SetupState.DEVICE_RESTARTING -> _setup.value = SetupUi(SetupState.RECONNECTING)         // the expected restart
+            else -> {}
+        }
+    }
+
     fun init(ctx: Context) {
         if (inited) return
         inited = true
@@ -222,13 +358,13 @@ object NavController : BleListener {
         )
         statusText = combine(_phase, ble.state, _progress) { p, b, pr ->
             val nav = when (p) {
-                Phase.IDLE -> "Idle"
-                Phase.ROUTING -> "Calculating route..."
-                Phase.NAVIGATING -> pr?.let { "Navigating, ${fmtDist(it.remainingM, false)} left" } ?: "Navigating"
-                Phase.REROUTING -> "Rerouting..."
-                Phase.ARRIVED -> "Arrived"
+                Phase.IDLE -> L.s(R.string.status_idle)
+                Phase.ROUTING -> L.s(R.string.status_calculating)
+                Phase.NAVIGATING -> pr?.let { L.s(R.string.status_navigating_left, fmtDist(it.remainingM, false)) } ?: L.s(R.string.status_navigating)
+                Phase.REROUTING -> L.s(R.string.status_rerouting)
+                Phase.ARRIVED -> L.s(R.string.status_arrived)
             }
-            "$nav  |  device: ${b.name.lowercase()}"
+            "$nav  |  ${L.s(R.string.status_device)}: ${bleLabel(b).lowercase()}"
         }.stateIn(scope, SharingStarted.Eagerly, "CubiNav")
 
         notif = combine(_phase, ble.state, _progress, _dest, combine(_route, speedLimit) { r, lim -> r to lim }) { p, b, pr, d, (r, lim) ->
@@ -251,6 +387,8 @@ object NavController : BleListener {
                 watchdog()
             }
         }
+        _setupDraft.value = SetupDraft.from(prefs.settings.value)
+        scope.launch { ble.state.collect { onLinkStateForSetup(it) } }
         refreshCapabilities()
     }
 
@@ -259,6 +397,7 @@ object NavController : BleListener {
 
     private fun log(s: String) {
         val t = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date())
+        android.util.Log.d("CubiNav", s)                       // also in Logcat (filter: tag CubiNav)
         _log.value = (_log.value + "$t $s").takeLast(300)
     }
 
@@ -309,10 +448,24 @@ object NavController : BleListener {
         ble.send(b)
     }
 
+    private var helloGot = false
+    private var helloRetry: Job? = null
+
     override fun onReady() {
         helloAcked = false
+        helloGot = false
         ble.send(Proto.hello())
         log("> HELLO")
+        // The first write can be lost while the link is still being encrypted (fresh pairing): ask again until the device answers.
+        helloRetry?.cancel()
+        helloRetry = scope.launch {
+            repeat(5) {
+                delay(2_000)
+                if (helloGot || ble.state.value != BleState.CONNECTED) return@launch
+                log("> HELLO (retry)")
+                ble.send(Proto.hello())
+            }
+        }
     }
 
     override fun onBattery(pct: Int) { _battery.value = pct }
@@ -322,6 +475,7 @@ object NavController : BleListener {
         when (d[0].toInt() and 0xFF) {
             Proto.HELLO_ACK -> Proto.parseHelloAck(d)?.let { onHelloAck(it) }
             Proto.OTA_ACK -> Proto.parseOtaAck(d)?.let { Ota.onAck(it) }
+            Proto.SETUP_ACK -> Proto.parseSetupAck(d)?.let { onSetupAck(it) }
             Proto.ROUTE_ACK -> Proto.parseRouteAck(d)?.let {
                 _lastAck.value = "route=${it.routeId} status=${it.status} expected=${it.expectedIdx} free=${it.freeSlots}"
                 streamer.onAck(it)
@@ -331,16 +485,28 @@ object NavController : BleListener {
     }
 
     private fun onHelloAck(a: HelloAck) {
+        helloGot = true
         log("< HELLO_ACK proto=${a.proto} fw=0x${a.fw.toString(16)} ${a.screenW}x${a.screenH} max=${a.maxPoints}")
         _deviceFw.value = a.fw
         if (a.proto != Proto.VERSION) {                           // README 6.8
-            banner("Device firmware speaks protocol ${a.proto}; this app needs ${Proto.VERSION}. Update required.")
+            banner(L.s(R.string.banner_proto, a.proto, Proto.VERSION))
             ble.disconnect()
             return
         }
+        _deviceConfigured.value = a.configured
+        if (!a.configured) {
+            // The device waits for the wizard: no CONFIG / route replay until it is configured.
+            if (setupSaved) { setupSaved = false; failSetup(SetupError.NOT_CONFIGURED) }
+            return
+        }
+        if (setupSaved) {                                         // restarted and reports configured: onboarding is complete
+            setupSaved = false
+            cancelSetupTimeout()
+            _setup.value = SetupUi(SetupState.COMPLETE)
+        }
         helloAcked = true
         streamer.maxPoints = a.maxPoints
-        pushConfig()
+        pushConfig()       // local prefs were saved before SETUP_CONFIG was sent, so this repeats the committed values
         uploadRoute()
     }
 
@@ -452,7 +618,7 @@ object NavController : BleListener {
     fun dismissSwapPrompt() { _swapPrompt.value = null }
     fun acceptSwap() {
         _swapPrompt.value?.let {
-            val lbl = "%.5f, %.5f".format(it.lat, it.lon)
+            val lbl = "%.5f, %.5f".format(java.util.Locale.US, it.lat, it.lon)
             if (swapAsStop) addWaypoint(it.lat, it.lon, lbl) else setDestination(it.lat, it.lon, lbl, false)
         }
         swapAsStop = false
@@ -510,11 +676,11 @@ object NavController : BleListener {
     fun submitQuery(q: String, asStop: Boolean = false) {
         when (val c = CoordParser.parse(q)) {
             is CoordResult.Ok -> {
-                val lbl = "%.5f, %.5f".format(c.lat, c.lon)
+                val lbl = "%.5f, %.5f".format(java.util.Locale.US, c.lat, c.lon)
                 if (asStop) addWaypoint(c.lat, c.lon, lbl) else setDestination(c.lat, c.lon, lbl, confirmed = false)
             }
             is CoordResult.Swapped -> { swapAsStop = asStop; _swapPrompt.value = LatLon(c.lat, c.lon) }
-            CoordResult.Invalid -> banner("Coordinates out of range (|lat| <= 90, |lon| <= 180)")
+            CoordResult.Invalid -> banner(L.s(R.string.banner_coords_range))
             CoordResult.NotCoords -> {
                 val s = prefs.settings.value
                 scope.launch {
@@ -522,11 +688,11 @@ object NavController : BleListener {
                     try {
                         val r = Geocoder.search(s.nominatimUrl, s.userAgent, q)
                         _results.value = r
-                        if (r.isEmpty()) banner("No results. Try coordinates, e.g. -34.6037, -58.3816")
+                        if (r.isEmpty()) banner(L.s(R.string.banner_no_results))
                     } catch (e: RateLimitedException) {
-                        banner("Nominatim rate limit hit. Wait a few seconds.")
+                        banner(L.s(R.string.banner_rate_limit))
                     } catch (e: Exception) {
-                        banner("Search failed: ${e.message}")
+                        banner(L.s(R.string.banner_search_failed, e.message.orEmpty()))
                     } finally {
                         _searching.value = false
                     }
@@ -561,16 +727,16 @@ object NavController : BleListener {
     }
 
     fun saveRoute(uri: Uri) {
-        val xml = routeGpx() ?: run { banner("Nothing to save: set a destination first"); return }
+        val xml = routeGpx() ?: run { banner(L.s(R.string.banner_nothing_to_save)); return }
         val n = _waypoints.value.size
         scope.launch {
             try {
                 withContext(Dispatchers.IO) {
                     app.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(xml.toByteArray(Charsets.UTF_8)) }
                 }
-                banner("Route saved: $n waypoint(s) + destination")
+                banner(L.s(R.string.banner_route_saved, n))
             } catch (e: Exception) {
-                banner("Save failed: ${e.message}")
+                banner(L.s(R.string.banner_save_failed, e.message.orEmpty()))
             }
         }
     }
@@ -584,13 +750,13 @@ object NavController : BleListener {
             val pts = try {
                 withContext(Dispatchers.IO) { app.contentResolver.openInputStream(uri)!!.use { parseGpxRoute(it) } }
             } catch (e: Exception) {
-                banner("Load failed: ${e.message}"); return@launch
+                banner(L.s(R.string.banner_load_failed, e.message.orEmpty())); return@launch
             }
-            if (pts.isEmpty()) { banner("No route points (rtept / wpt) found in that file"); return@launch }
+            if (pts.isEmpty()) { banner(L.s(R.string.banner_no_route_points)); return@launch }
             val dst = pts.last()
             _waypoints.value = pts.dropLast(1).map { Dest(it.lat, it.lon, it.label) }
             setDestination(dst.lat, dst.lon, dst.label)
-            banner("Route loaded: ${pts.size - 1} waypoint(s) + destination")
+            banner(L.s(R.string.banner_route_loaded, pts.size - 1))
         }
     }
 
@@ -636,8 +802,8 @@ object NavController : BleListener {
         if (activePreset(s, caps) != null) return RoadCheck(null, false)
         val ex = excludedFor(s, caps)
         if (ex.isEmpty()) return RoadCheck(null, false)
-        if (caps == null) return RoadCheck("Server capabilities unavailable: filters are sent unverified.", false)
-        if (!caps.supports(ex)) return RoadCheck("This server cannot avoid exactly: ${ex.joinToString()}. Change the toggles or the server profile.", true)
+        if (caps == null) return RoadCheck(L.s(R.string.road_caps_unavailable), false)
+        if (!caps.supports(ex)) return RoadCheck(L.s(R.string.road_cannot_avoid, ex.joinToString { Roads.label(it) }), true)
         return RoadCheck(null, false)
     }
 
@@ -663,9 +829,9 @@ object NavController : BleListener {
     // ---- navigation lifecycle ---------------------------------------------------------------------------
     fun startNavigation(phoneOnly: Boolean = false) {
         val d = _dest.value ?: return
-        if (Ota.busy) { banner("A firmware update is in progress"); return }
+        if (Ota.busy) { banner(L.s(R.string.banner_ota_busy)); return }
         val f = _fix.value
-        if (f == null) { banner("Waiting for a GPS fix"); return }
+        if (f == null) { banner(L.s(R.string.banner_waiting_gps)); return }
         val chk = roadCheck(prefs.settings.value, _caps.value)
         if (chk.blocking) { banner(chk.message); return }
         _noRouteHint.value = false
@@ -677,7 +843,7 @@ object NavController : BleListener {
                 projector = Projector(f.lat, f.lon)
                 prefs.addRecent(d)
                 if (r.snapDestM > 100) {
-                    _note.value = "Nearest reachable road is ${r.snapDestM.roundToInt()} m away"
+                    _note.value = L.s(R.string.note_nearest_road, r.snapDestM.roundToInt())
                 }
                 _destSnapped.value = LatLon(r.lat.last(), r.lon.last())
                 applyRoute(r, reroute = false)
@@ -685,16 +851,16 @@ object NavController : BleListener {
                 _phase.value = Phase.IDLE
                 _phoneOnly.value = false
                 _noRouteHint.value = true
-                banner("No route with these road types")
+                banner(L.s(R.string.banner_no_route))
             } catch (e: UnsupportedExcludeException) {
                 _phase.value = Phase.IDLE
                 _phoneOnly.value = false
                 _noRouteHint.value = true
-                banner("This OSRM server can't avoid that combination of road types")
+                banner(L.s(R.string.banner_cannot_avoid_combo))
             } catch (e: Exception) {
                 _phase.value = Phase.IDLE
                 _phoneOnly.value = false
-                banner("Routing failed: ${e.message}")
+                banner(L.s(R.string.banner_routing_failed, e.message.orEmpty()))
             }
         }
     }
@@ -813,7 +979,7 @@ object NavController : BleListener {
             _phase.value = Phase.ARRIVED
             sendCmd(Proto.maneuver(10, Maneuvers.ascii(_dest.value?.label.orEmpty())))
             sendCmd(Proto.navState(Proto.NAV_ARRIVED))
-            banner("Arrived")
+            banner(L.s(R.string.status_arrived))
         }
         if (_phase.value == Phase.ARRIVED) return
 
@@ -870,13 +1036,13 @@ object NavController : BleListener {
                 nextRerouteAt = SystemClock.elapsedRealtime() + 5000
                 applyRoute(r, reroute = true)
             } catch (e: NoRouteException) {
-                banner("No route with these road types (keeping old route)")
+                banner(L.s(R.string.banner_no_route_keep))
                 failReroute()
             } catch (e: UnsupportedExcludeException) {
-                banner("This OSRM server can't avoid that combination of road types (keeping old route)")
+                banner(L.s(R.string.banner_cannot_avoid_keep))
                 failReroute()
             } catch (e: Exception) {
-                banner("OSRM unreachable. Keeping current route.")
+                banner(L.s(R.string.banner_osrm_unreachable))
                 failReroute()
             } finally {
                 rerouting = false

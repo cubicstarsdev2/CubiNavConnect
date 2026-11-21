@@ -257,12 +257,9 @@ object Ota {
     private fun exText(e: Throwable): String {
         if (e is Net.HttpException && (e.code == 401 || e.code == 404)) {
             val hasToken = NavController.prefs.settings.value.githubToken.isNotBlank()
-            return "GitHub answered HTTP ${e.code}. " + if (hasToken)
-                "Check the token (Contents: read) and that it can access this repo, branch and path."
-            else
-                "If the repo is private, add a GitHub token in Settings > Advanced > Firmware sources."
+            return L.s(if (hasToken) R.string.ota_err_http_token else R.string.ota_err_http_notoken, e.code)
         }
-        return "${e.javaClass.simpleName}: ${e.message ?: "(no message)"}"
+        return "${e.javaClass.simpleName}: ${e.message ?: L.s(R.string.ota_no_message)}"
     }
     private fun ua() = NavController.prefs.settings.value.userAgent
 
@@ -306,13 +303,13 @@ object Ota {
         log("OTA: device fw=${NavController.deviceFw.value} ble=${NavController.bleState.value} mtu=${NavController.link().mtu}")
         precondition()?.let { fail(it); return }
         val url = sanitizeFirmwareUrl(NavController.prefs.settings.value.binUrl)
-        if (url.isEmpty()) { fail("Set the firmware .bin URL first."); return }
+        if (url.isEmpty()) { fail(L.s(R.string.ota_set_bin_url)); return }
         job = scope.launch {
             try {
                 run(downloadDirect(url)) { downloadDirect(url) }
             } catch (e: CancellationException) {
                 transfer?.cancel()
-                set(OtaPhase.ERROR, "Update cancelled.", 0f, null)
+                set(OtaPhase.ERROR, L.s(R.string.ota_cancelled), 0f, null)
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "update failed", e)
@@ -341,21 +338,20 @@ object Ota {
         log("OTA: readme=$readme")
         log("OTA: bin=$bin")
         precondition()?.let { fail(it); return }
-        if (readme.isEmpty() || bin.isEmpty()) { fail("Set the README and .bin URLs first."); return }
+        if (readme.isEmpty() || bin.isEmpty()) { fail(L.s(R.string.ota_set_urls)); return }
         job = scope.launch {
             try {
-                set(OtaPhase.CHECKING, "Reading the version from the README...", -1f, null)
+                set(OtaPhase.CHECKING, L.s(R.string.ota_reading_readme), -1f, null)
                 log("OTA: GET README")
                 val text = Net.get(bust(readme), ua())
                 log("OTA: README ${text.length} chars; first lines: " +
                         text.lineSequence().take(4).joinToString(" | ") { it.trim().take(50) })
                 val remote = parseReadmeVersion(text)
-                    ?: throw IllegalStateException("No valid \"## x.y.z\" line in the README (minor and patch must be 0-15). " +
-                            "Is it committed and pushed to the branch in the README URL?")
+                    ?: throw IllegalStateException(L.s(R.string.ota_no_version_line))
                 log("OTA: README version ${fmtVersion(remote)} (0x${remote.toString(16)})")
                 if (remote == fw) {
                     log("OTA: versions match, nothing to do")
-                    set(OtaPhase.UP_TO_DATE, "Device is up to date (${fmtVersion(fw)}).", 0f, null)
+                    set(OtaPhase.UP_TO_DATE, L.s(R.string.ota_up_to_date, fmtVersion(fw)), 0f, null)
                     return@launch
                 }
                 val label = fmtVersion(remote)
@@ -364,7 +360,7 @@ object Ota {
             } catch (e: CancellationException) {
                 log("OTA: cancelled")
                 transfer?.cancel()
-                set(OtaPhase.ERROR, "Update cancelled.", 0f, null)
+                set(OtaPhase.ERROR, L.s(R.string.ota_cancelled), 0f, null)
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "update failed", e)
@@ -387,8 +383,8 @@ object Ota {
     // ---- internals ------------------------------------------------------------------------------------
     private fun precondition(): String? {
         if (NavController.bleState.value != BleState.CONNECTED || NavController.deviceFw.value < 0)
-            return "Connect to the device first (Device tab)."
-        if (NavController.phase.value != Phase.IDLE) return "Stop navigation before updating the firmware."
+            return L.s(R.string.ota_connect_first)
+        if (NavController.phase.value != Phase.IDLE) return L.s(R.string.ota_stop_nav)
         return null
     }
 
@@ -410,7 +406,7 @@ object Ota {
 
     private suspend fun transferOnce(m: OtaManifest, image: ByteArray): Int {
         val link = NavController.link()
-        set(OtaPhase.TRANSFERRING, "Starting transfer...", 0f, m)
+        set(OtaPhase.TRANSFERRING, L.s(R.string.ota_starting), 0f, m)
         log("OTA: starting transfer, ${image.size} B, version 0x${m.versionCode.toString(16)}, md5 ${m.md5}, link=${link.state.value}")
         link.requestFastLink()
         val t = OtaTransfer(
@@ -422,7 +418,7 @@ object Ota {
             linkUp = { link.state.value == BleState.CONNECTED },
             log = { log(it) },
             onProgress = { done ->
-                set(OtaPhase.TRANSFERRING, "Sending ${done / 1024} / ${image.size / 1024} KB",
+                set(OtaPhase.TRANSFERRING, L.s(R.string.ota_sending, done / 1024, image.size / 1024),
                     (done.toFloat() / image.size).coerceIn(0f, 1f), m)
             },
         )
@@ -460,19 +456,19 @@ object Ota {
 
     /** [version]/[code] override the version that would be read from the image (used by the README flow). */
     private suspend fun downloadDirect(url: String, version: String? = null, code: Int = -1): Pair<OtaManifest, ByteArray> {
-        set(OtaPhase.DOWNLOADING, "Downloading firmware...", -1f, null)
+        set(OtaPhase.DOWNLOADING, L.s(R.string.ota_downloading), -1f, null)
         log("OTA: GET $url")
         val dl0 = SystemClock.elapsedRealtime()
         val bytes = Net.getBytes(bust(url), ua(), MAX_DIRECT_BYTES) { n, total ->
-            set(OtaPhase.DOWNLOADING, "Downloading ${n / 1024} KB",
+            set(OtaPhase.DOWNLOADING, L.s(R.string.ota_downloading_kb, n / 1024),
                 if (total > 0) (n.toFloat() / total).coerceIn(0f, 1f) else -1f, null)
         }
         log("OTA: downloaded ${bytes.size} B in ${SystemClock.elapsedRealtime() - dl0} ms, " +
                 "first byte " + (if (bytes.isNotEmpty()) "0x%02X".format(bytes[0]) else "-"))
-        if (bytes.size < 1024) throw IllegalStateException("Downloaded file is too small to be firmware. Is the URL a raw file link?")
+        if (bytes.size < 1024) throw IllegalStateException(L.s(R.string.ota_too_small))
         if (bytes[0] != 0xE9.toByte())
-            throw IllegalStateException("Not an ESP32 application image. Use the raw.githubusercontent.com link to the .bin, not the github.com page.")
-        set(OtaPhase.DOWNLOADING, "Verifying download...", -1f, null)
+            throw IllegalStateException(L.s(R.string.ota_not_image))
+        set(OtaPhase.DOWNLOADING, L.s(R.string.ota_verifying), -1f, null)
         val md5 = withContext(Dispatchers.Default) { digest("MD5", bytes) }
         val ver = version ?: appDescVersion(bytes)
         val m = OtaManifest(
@@ -502,38 +498,38 @@ object Ota {
     }
 
     private suspend fun awaitReboot(m: OtaManifest) {
-        set(OtaPhase.REBOOTING, "Device is restarting into ${m.version}...", -1f, m)
+        set(OtaPhase.REBOOTING, L.s(R.string.ota_rebooting, m.version), -1f, m)
         NavController.resetDeviceFw()
         val fw = withTimeoutOrNull(60_000) { NavController.deviceFw.first { it >= 0 } }
         when {
-            fw == null -> fail("The device did not reconnect within 60 s. Reconnect from the Device tab and check its version.", m)
+            fw == null -> fail(L.s(R.string.ota_no_reconnect), m)
             m.versionCode < 0 -> {
                 log("OTA: device back, reports ${fmtVersion(fw)}")
-                set(OtaPhase.DONE, "Device is back, now reporting ${fmtVersion(fw)}. The .bin carries no readable version, so it was not compared.", 1f, null)
+                set(OtaPhase.DONE, L.s(R.string.ota_back_unverified, fmtVersion(fw)), 1f, null)
             }
             fw == m.versionCode -> {
                 log("OTA: device now reports ${fmtVersion(fw)}")
-                set(OtaPhase.DONE, "Updated to ${m.version}.", 1f, m)
+                set(OtaPhase.DONE, L.s(R.string.ota_updated, m.version), 1f, m)
             }
-            else -> fail("Device came back with firmware ${fmtVersion(fw)}, expected ${m.version}. The device may have rolled back.", m)
+            else -> fail(L.s(R.string.ota_wrong_version, fmtVersion(fw), m.version), m)
         }
     }
 
     private fun describe(code: Int): String = when (code) {
-        Proto.OTA_E_STATE -> "The device was not ready for an update. Try again."
-        Proto.OTA_E_SIZE -> "Firmware too large for the device's OTA partition."
-        Proto.OTA_E_FLASH -> "Flash write failed on the device (or it has no OTA partition)."
-        Proto.OTA_E_MD5 -> "Checksum mismatch on the device."
-        Proto.OTA_E_BATTERY -> "Device battery is below 30%. Charge it and retry."
-        Proto.OTA_E_TIMEOUT -> "The device stopped receiving data."
-        Proto.OTA_E_ARGS -> "The device rejected a malformed message (app bug)."
-        Proto.OTA_E_ABORTED -> "The update was aborted."
-        Proto.OTA_E_NOT_SECURE -> "The link is not encrypted. Pair the device first, then retry."
-        Proto.OTA_E_IMAGE -> "Not a valid ESP32 application image."
-        OtaTransfer.NO_SUPPORT -> "This device firmware has no OTA support. Update it by cable once."
-        OtaTransfer.LINK_LOST -> "Bluetooth link lost during the update. The old firmware is untouched."
-        OtaTransfer.NO_REPLY -> "The device stopped answering. The old firmware is untouched."
-        OtaTransfer.CANCELLED -> "Update cancelled."
-        else -> "Update failed (code $code)."
+        Proto.OTA_E_STATE -> L.s(R.string.ota_e_state)
+        Proto.OTA_E_SIZE -> L.s(R.string.ota_e_size)
+        Proto.OTA_E_FLASH -> L.s(R.string.ota_e_flash)
+        Proto.OTA_E_MD5 -> L.s(R.string.ota_e_md5)
+        Proto.OTA_E_BATTERY -> L.s(R.string.ota_e_battery)
+        Proto.OTA_E_TIMEOUT -> L.s(R.string.ota_e_timeout)
+        Proto.OTA_E_ARGS -> L.s(R.string.ota_e_args)
+        Proto.OTA_E_ABORTED -> L.s(R.string.ota_e_aborted)
+        Proto.OTA_E_NOT_SECURE -> L.s(R.string.ota_e_not_secure)
+        Proto.OTA_E_IMAGE -> L.s(R.string.ota_e_image)
+        OtaTransfer.NO_SUPPORT -> L.s(R.string.ota_e_no_support)
+        OtaTransfer.LINK_LOST -> L.s(R.string.ota_e_link_lost)
+        OtaTransfer.NO_REPLY -> L.s(R.string.ota_e_no_reply)
+        OtaTransfer.CANCELLED -> L.s(R.string.ota_cancelled)
+        else -> L.s(R.string.ota_e_generic, code)
     }
 }

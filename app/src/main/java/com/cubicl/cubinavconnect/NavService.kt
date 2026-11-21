@@ -47,8 +47,8 @@ class NavService : Service() {
         if (Build.VERSION.SDK_INT >= 26) {
             nm.deleteNotificationChannel(OLD_CH)    // channel settings are frozen once created: use a fresh id
             nm.createNotificationChannel(
-                NotificationChannel(CH, "Navigation status", NotificationManager.IMPORTANCE_LOW).apply {
-                    description = "Trip progress and quick controls while CubiNav is running"
+                NotificationChannel(CH, L.s(R.string.notif_channel), NotificationManager.IMPORTANCE_LOW).apply {
+                    description = L.s(R.string.notif_channel_desc)
                     setShowBadge(false)
                     lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                 })
@@ -80,19 +80,19 @@ class NavService : Service() {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-    private fun verb(code: Int) = when (code) {
-        1 -> "Continue straight"
-        2 -> "Turn left"
-        3 -> "Turn right"
-        4 -> "Bear left"
-        5 -> "Bear right"
-        6 -> "Sharp left"
-        7 -> "Sharp right"
-        8 -> "Make a U-turn"
-        9 -> "Take the roundabout"
-        10 -> "Arrive at destination"
-        else -> "Continue"
-    }
+    private fun verb(code: Int) = L.s(when (code) {
+        1 -> R.string.verb_1
+        2 -> R.string.verb_2
+        3 -> R.string.verb_3
+        4 -> R.string.verb_4
+        5 -> R.string.verb_5
+        6 -> R.string.verb_6
+        7 -> R.string.verb_7
+        8 -> R.string.verb_8
+        9 -> R.string.verb_9
+        10 -> R.string.verb_10
+        else -> R.string.verb_default
+    })
 
     private fun etaText(n: NavNotif): String =
         DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(System.currentTimeMillis() + (n.remainingS * 1000).toLong()))
@@ -150,9 +150,9 @@ class NavService : Service() {
     private fun idleNotification(n: NavNotif): Notification {
         val b = baseBuilder()
             .setContentTitle("CubiNav")
-            .setContentText(if (n.ble == BleState.CONNECTED) "Display connected" else bleLabel(n.ble))
-        if (n.ble != BleState.IDLE && n.ble != BleState.OFF) b.addAction(0, "Disconnect", action(ACTION_DISCONNECT, 2))
-        b.addAction(0, "Open", openApp())
+            .setContentText(if (n.ble == BleState.CONNECTED) L.s(R.string.notif_display_connected) else bleLabel(n.ble))
+        if (n.ble != BleState.IDLE && n.ble != BleState.OFF) b.addAction(0, L.s(R.string.notif_disconnect), action(ACTION_DISCONNECT, 2))
+        b.addAction(0, L.s(R.string.notif_open), openApp())
         return b.build()
     }
 
@@ -164,12 +164,12 @@ class NavService : Service() {
         val title: String
         val subtitle: String
         when (n.phase) {
-            Phase.ROUTING -> { title = "Calculating route..."; subtitle = n.dest.ifEmpty { "Destination" } }
-            Phase.REROUTING -> { title = "Rerouting..."; subtitle = "Finding a new way from here" }
-            Phase.ARRIVED -> { title = "You have arrived"; subtitle = n.dest.ifEmpty { "Destination" } }
+            Phase.ROUTING -> { title = L.s(R.string.status_calculating); subtitle = n.dest.ifEmpty { L.s(R.string.notif_destination) } }
+            Phase.REROUTING -> { title = L.s(R.string.status_rerouting); subtitle = L.s(R.string.notif_rerouting_sub) }
+            Phase.ARRIVED -> { title = L.s(R.string.nav_arrived); subtitle = n.dest.ifEmpty { L.s(R.string.notif_destination) } }
             else -> {
                 title = n.distToTurn?.let { "${fmtDist(it.toDouble(), imperial)}  ·  ${verb(n.icon)}" } ?: verb(n.icon)
-                subtitle = n.street.ifEmpty { if (n.dest.isNotEmpty()) "To: ${n.dest}" else "Follow the route" }
+                subtitle = n.street.ifEmpty { if (n.dest.isNotEmpty()) L.s(R.string.notif_to, n.dest) else L.s(R.string.notif_follow) }
             }
         }
 
@@ -192,26 +192,26 @@ class NavService : Service() {
                 if (n.hasProgress) "${fmtDist(n.remainingM, imperial)}  ·  ${fmtDuration(n.remainingS)}" else "")
 
             rv.setOnClickPendingIntent(R.id.b_open, openApp())
-            rv.setContentDescription(R.id.b_open, "Open map")
+            rv.setContentDescription(R.id.b_open, L.s(R.string.cd_open_map))
 
             rv.setOnClickPendingIntent(R.id.b_recalc, action(ACTION_RECALC, 3))
-            rv.setContentDescription(R.id.b_recalc, "Recalculate route")
+            rv.setContentDescription(R.id.b_recalc, L.s(R.string.cd_recalc))
             rv.setViewVisibility(R.id.w_recalc, if (moving) View.VISIBLE else View.GONE)
 
             rv.setOnClickPendingIntent(R.id.b_stop, action(ACTION_STOP, 1))
             rv.setImageViewResource(R.id.b_stop, if (arrived) R.drawable.ic_nav_done else R.drawable.ic_nav_stop)
-            rv.setContentDescription(R.id.b_stop, if (arrived) "Finish" else "Stop navigation")
+            rv.setContentDescription(R.id.b_stop, L.s(if (arrived) R.string.common_finish else R.string.cd_stop_nav))
 
             rv.setOnClickPendingIntent(R.id.b_disc, action(ACTION_DISCONNECT, 2))
-            rv.setContentDescription(R.id.b_disc, "Disconnect display")
+            rv.setContentDescription(R.id.b_disc, L.s(R.string.cd_disconnect))
             rv.setViewVisibility(R.id.w_disc,
                 if (n.ble != BleState.IDLE && n.ble != BleState.OFF) View.VISIBLE else View.GONE)
         }
 
         val sub = buildString {
-            if (moving && n.hasProgress && n.remainingS > 0) append("ETA ").append(etaText(n)).append("  ·  ")
-            if (moving && n.limitKmh > 0) append("Limit ").append(limitValue(n.limitKmh, imperial)).append("  ·  ")
-            append("Display ").append(bleLabel(n.ble).lowercase())
+            if (moving && n.hasProgress && n.remainingS > 0) append(L.s(R.string.notif_eta, etaText(n))).append("  ·  ")
+            if (moving && n.limitKmh > 0) append(L.s(R.string.notif_limit, limitValue(n.limitKmh, imperial))).append("  ·  ")
+            append(L.s(R.string.notif_display_state, bleLabel(n.ble).lowercase()))
         }
 
         return baseBuilder()

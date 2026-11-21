@@ -165,6 +165,7 @@ class BleLink(private val ctx: Context, private val l: BleListener) {
         ready = false
         writing = false
         rx = null
+        discovering = false
         queue.clear()
         pendingPose = null
         notifyQueue.clear()
@@ -200,11 +201,27 @@ class BleLink(private val ctx: Context, private val l: BleListener) {
         state.value = BleState.BONDING
         if (!bondRegistered) {
             ContextCompat.registerReceiver(ctx, bondRx, IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED),
-                ContextCompat.RECEIVER_NOT_EXPORTED)
+                ContextCompat.RECEIVER_EXPORTED)   // the broadcast comes from the Bluetooth process: NOT_EXPORTED can miss it
             bondRegistered = true
         }
         l.onLog("bonding...")
-        if (!dev.createBond()) l.onLog("createBond() returned false")
+        // Let the fresh connection settle first: createBond() straight from the connect callback can race with Android's own
+        // security handling and leave the passkey dialog from showing.
+        handler.postDelayed({
+            if (gatt?.device?.address != dev.address) return@postDelayed
+            l.onLog("createBond (bond state ${dev.bondState})")
+            if (dev.bondState == BluetoothDevice.BOND_NONE && !dev.createBond()) l.onLog("createBond() returned false")
+            pollBond(dev, 0)
+        }, 600)
+    }
+
+    /** Fallback if the BOND_STATE_CHANGED broadcast never arrives: look at the bond state directly (the receiver, if it fired, wins). */
+    private fun pollBond(dev: BluetoothDevice, tries: Int) {
+        handler.postDelayed({
+            if (gatt?.device?.address != dev.address || !bondRegistered) return@postDelayed
+            if (dev.bondState == BluetoothDevice.BOND_BONDED) { unregisterBond(); l.onLog("bonded (poll)"); requestMtuSoon() }
+            else if (tries < 240) pollBond(dev, tries + 1)           // up to ~2 min: the user has to type the passkey
+        }, 500)
     }
 
     private fun unregisterBond() {
@@ -214,9 +231,22 @@ class BleLink(private val ctx: Context, private val l: BleListener) {
         }
     }
 
+    private var notifyToken = 0
+    private var discovering = false      // service discovery already started for this link
+
+    private fun discoverOnce(g: BluetoothGatt, why: String) {
+        if (discovering || g !== gatt) return
+        discovering = true
+        l.onLog("discovering services ($why)")
+        g.discoverServices()
+    }
+
     private fun requestMtuSoon() {
         val g = gatt ?: return
-        handler.postDelayed({ if (g === gatt) g.requestMtu(247) }, 300)
+        discovering = false
+        handler.postDelayed({ if (g === gatt) { val ok = g.requestMtu(247); l.onLog("requestMtu -> $ok") } }, 300)
+        // Right after a fresh pairing Android sometimes never reports the MTU result: do not wait for it forever.
+        handler.postDelayed({ if (g === gatt && !discovering) discoverOnce(g, "no MTU callback") }, 3000)
     }
 
     // ---- GATT callbacks (binder thread -> hop to the main handler) -------------------------------
@@ -224,6 +254,7 @@ class BleLink(private val ctx: Context, private val l: BleListener) {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
             handler.post {
                 if (g !== gatt) { try { g.close() } catch (_: Exception) {}; return@post }
+                l.onLog("connection state=$newState status=$status bond=${g.device.bondState}")
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
                     g.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)   // ~11-15 ms
                     val dev = g.device
@@ -240,7 +271,7 @@ class BleLink(private val ctx: Context, private val l: BleListener) {
                 if (g !== gatt) return@post
                 this@BleLink.mtu = mtu
                 l.onLog("MTU $mtu")
-                g.discoverServices()
+                discoverOnce(g, "MTU done")
             }
         }
 
@@ -248,6 +279,7 @@ class BleLink(private val ctx: Context, private val l: BleListener) {
             handler.post {
                 if (g !== gatt) return@post
                 val svc = g.getService(SERVICE)
+                l.onLog("services discovered status=$status cubinav=${svc != null}")
                 val r = svc?.getCharacteristic(RX)
                 val t = svc?.getCharacteristic(TX)
                 if (r == null || t == null) {
@@ -264,7 +296,7 @@ class BleLink(private val ctx: Context, private val l: BleListener) {
         }
 
         override fun onDescriptorWrite(g: BluetoothGatt, d: android.bluetooth.BluetoothGattDescriptor, status: Int) {
-            handler.post { if (g === gatt) enableNextNotify(g) }
+            handler.post { l.onLog("descriptor write status=$status"); if (g === gatt) enableNextNotify(g) }
         }
 
         override fun onCharacteristicWrite(g: BluetoothGatt, c: BluetoothGattCharacteristic, status: Int) {
@@ -290,8 +322,12 @@ class BleLink(private val ctx: Context, private val l: BleListener) {
 
     @Suppress("DEPRECATION")
     private fun enableNextNotify(g: BluetoothGatt) {
+        notifyToken++
         val c = notifyQueue.poll()
         if (c == null) { finishReady(); return }
+        val tok = notifyToken
+        // a lost descriptor-write callback must not stall the link forever
+        handler.postDelayed({ if (tok == notifyToken && !ready && g === gatt) { l.onLog("descriptor write timeout, skipping"); enableNextNotify(g) } }, 3000)
         g.setCharacteristicNotification(c, true)
         val d = c.getDescriptor(CCCD)
         if (d == null) { enableNextNotify(g); return }

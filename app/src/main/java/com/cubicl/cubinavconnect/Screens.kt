@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -44,6 +45,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 private val PAGE_PAD = 16.dp
@@ -65,45 +68,51 @@ fun DeviceScreen() {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(PAGE_PAD),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        ScreenTitle(TIcons.Bluetooth, "Device", "Your CubiNav display")
+        ScreenTitle(TIcons.Bluetooth, stringResource(R.string.tab_device), stringResource(R.string.device_subtitle))
 
-        Section("Connection", TIcons.Bluetooth) {
+        Section(stringResource(R.string.device_connection), TIcons.Bluetooth) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 InfoChip(TIcons.Bluetooth, bleLabel(state), tint = bleColor(state))
-                if (state == BleState.CONNECTED) InfoChip(null, "Battery ${if (batt >= 0) "$batt %" else "unknown"}")
+                if (state == BleState.CONNECTED) InfoChip(null, if (batt >= 0) stringResource(R.string.device_battery, batt) else stringResource(R.string.device_battery_unknown))
             }
             if (s.deviceAddress.isNotEmpty())
-                Text("Saved: ${s.deviceName.ifEmpty { "CubiNav" }} (${s.deviceAddress})", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.device_saved, s.deviceName.ifEmpty { "CubiNav" }, s.deviceAddress), style = MaterialTheme.typography.bodyMedium)
             if (state == BleState.BONDING)
-                Text("Enter the passkey shown on the CubiNav screen when Android asks for it.", color = MaterialTheme.colorScheme.tertiary)
+                Text(stringResource(R.string.find_passkey), color = MaterialTheme.colorScheme.tertiary)
             if (state == BleState.OFF)
-                Text("Bluetooth is off. Turn it on in Android settings.", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.find_bt_off), color = MaterialTheme.colorScheme.error)
 
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Button(onClick = { NavController.scan() }, enabled = !scanning) {
-                    BtnContent(TIcons.Search, if (scanning) "Scanning..." else "Scan")
+                    BtnContent(TIcons.Search, stringResource(if (scanning) R.string.find_scanning else R.string.device_scan))
                 }
                 if (s.deviceAddress.isNotEmpty()) {
-                    FilledTonalButton(onClick = { NavController.connect(s.deviceAddress, s.deviceName) }) { BtnContent(TIcons.Refresh, "Reconnect") }
-                    OutlinedButton(onClick = { NavController.forgetDevice() }) { BtnContent(TIcons.Delete, "Forget") }
+                    FilledTonalButton(onClick = { NavController.connect(s.deviceAddress, s.deviceName) }) { BtnContent(TIcons.Refresh, stringResource(R.string.device_reconnect)) }
+                    if (state == BleState.CONNECTED)
+                        FilledTonalButton(onClick = { NavController.beginSetupManually() }) { BtnContent(TIcons.Settings, stringResource(R.string.device_run_setup)) }
+                    OutlinedButton(onClick = { NavController.forgetDevice() }) { BtnContent(TIcons.Delete, stringResource(R.string.device_forget)) }
                 }
             }
         }
 
-        Section("Nearby displays", TIcons.Search) {
-            if (found.isEmpty()) Text("None yet. Tap Scan with the CubiNav powered on.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Section(stringResource(R.string.device_nearby), TIcons.Search) {
+            if (found.isEmpty()) Text(stringResource(R.string.device_none_yet), color = MaterialTheme.colorScheme.onSurfaceVariant)
             found.forEach { d ->
-                Card(
-                    Modifier.fillMaxWidth().clickable { NavController.connect(d.address, d.name) },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                ) {
-                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(TIcons.Bluetooth, null, tint = MaterialTheme.colorScheme.primary)
-                        Column(Modifier.weight(1f)) {
-                            Text(d.name ?: "(unnamed)", fontWeight = FontWeight.Medium)
-                            Text(d.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                androidx.compose.runtime.key(d.address) {
+                    AppearOnEnter(Modifier.fillMaxWidth()) {
+                        Card(
+                            Modifier.fillMaxWidth().clickable { NavController.connect(d.address, d.name) },
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        ) {
+                            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Icon(TIcons.Bluetooth, null, tint = MaterialTheme.colorScheme.primary)
+                                Column(Modifier.weight(1f)) {
+                                    Text(d.name ?: stringResource(R.string.device_unnamed), fontWeight = FontWeight.Medium)
+                                    Text(d.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Text("${d.rssi} dBm", style = MaterialTheme.typography.labelMedium)
+                            }
                         }
-                        Text("${d.rssi} dBm", style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
@@ -112,7 +121,7 @@ fun DeviceScreen() {
         OtaSection(state == BleState.CONNECTED, s.binUrl, s.readmeUrl, s.advanced)
 
         Text(
-            "Tip: disable battery optimization for CubiNav, or Android may drop the BLE link with the screen off.",
+            stringResource(R.string.device_tip),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -134,16 +143,16 @@ private fun OtaSection(connected: Boolean, binUrl: String, readmeUrl: String, ad
         onDispose { view.keepScreenOn = false }
     }
 
-    Section("Firmware", TIcons.Refresh) {
-        Text("Installed version: ${if (fw >= 0) Ota.fmtVersion(fw) else "unknown (connect the device first)"}")
+    Section(stringResource(R.string.ota_title), TIcons.Refresh) {
+        Text(stringResource(R.string.ota_installed, if (fw >= 0) Ota.fmtVersion(fw) else stringResource(R.string.ota_unknown)))
         val canReadme = connected && fw >= 0 && !busy && navPhase == Phase.IDLE && readmeUrl.isNotBlank() && binUrl.isNotBlank()
         val canDirect = connected && fw >= 0 && !busy && navPhase == Phase.IDLE && binUrl.isNotBlank()
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Button(onClick = { Ota.updateFromReadme() }, enabled = canReadme) { BtnContent(TIcons.Refresh, "Check & update") }
-            if (busy && ui.phase != OtaPhase.REBOOTING) OutlinedButton(onClick = { Ota.cancel() }) { BtnContent(TIcons.Close, "Cancel") }
+            Button(onClick = { Ota.updateFromReadme() }, enabled = canReadme) { BtnContent(TIcons.Refresh, stringResource(R.string.ota_check)) }
+            if (busy && ui.phase != OtaPhase.REBOOTING) OutlinedButton(onClick = { Ota.cancel() }) { BtnContent(TIcons.Close, stringResource(R.string.common_cancel)) }
         }
         if (advanced)
-            OutlinedButton(onClick = { Ota.installDirect() }, enabled = canDirect) { BtnContent(TIcons.Warning, "Force install .bin") }
+            OutlinedButton(onClick = { Ota.installDirect() }, enabled = canDirect) { BtnContent(TIcons.Warning, stringResource(R.string.ota_force)) }
 
         if (ui.message.isNotEmpty())
             Text(ui.message, color = if (ui.phase == OtaPhase.ERROR) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
@@ -152,16 +161,16 @@ private fun OtaSection(connected: Boolean, binUrl: String, readmeUrl: String, ad
             else LinearProgressIndicator(progress = { ui.progress }, modifier = Modifier.fillMaxWidth())
         }
         if (ui.phase == OtaPhase.DONE || ui.phase == OtaPhase.ERROR)
-            TextButton(onClick = { Ota.dismiss() }) { Text("Dismiss") }
+            TextButton(onClick = { Ota.dismiss() }) { Text(stringResource(R.string.common_dismiss)) }
         if (trace.isNotEmpty() && (advanced || ui.phase == OtaPhase.ERROR)) {
-            Text("Update log (also in logcat, tag CubiNavOta)", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.ota_log_title), style = MaterialTheme.typography.titleSmall)
             trace.takeLast(14).forEach { Text(it, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace) }
         }
         if (!advanced)
-            Text("Firmware sources can be changed in Settings > Advanced configuration.", style = MaterialTheme.typography.bodySmall,
+            Text(stringResource(R.string.ota_sources_hint), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
-            "Keep the app open and the device above 30% battery during an update. The old firmware stays in place until the new image is fully verified.",
+            stringResource(R.string.ota_keep_open),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -182,28 +191,64 @@ fun SettingsScreen() {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(PAGE_PAD),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        ScreenTitle(TIcons.Settings, "Settings")
+        ScreenTitle(TIcons.Settings, stringResource(R.string.tab_settings))
 
-        Section("Allowed road types", TIcons.Navigation) {
+        Section(stringResource(R.string.settings_language), TIcons.Settings) {
+            val ctx = LocalContext.current
+            val bleSt by NavController.bleState.collectAsState()
+            val configured by NavController.deviceConfigured.collectAsState()
+            var pendingLang by remember { mutableStateOf<Int?>(null) }
+            LanguagePicker(s.language) { id ->
+                if (id != s.language) {
+                    // a connected, already-configured display can switch language too (it restarts)
+                    if (bleSt == BleState.CONNECTED && configured == true) pendingLang = id
+                    else { NavController.changeLanguage(id, alsoDevice = false); ctx.findActivity()?.recreate() }
+                }
+            }
+            pendingLang?.let { id ->
+                AlertDialog(
+                    onDismissRequest = { pendingLang = null },
+                    title = { Text(stringResource(R.string.lang_device_title, Lang.nativeName(id))) },
+                    text = { Text(stringResource(R.string.lang_device_body)) },
+                    confirmButton = {
+                        TextButton(onClick = { pendingLang = null; NavController.changeLanguage(id, alsoDevice = true); ctx.findActivity()?.recreate() }) {
+                            Text(stringResource(R.string.lang_device_both))
+                        }
+                    },
+                    dismissButton = {
+                        Row {
+                            TextButton(onClick = { pendingLang = null; NavController.changeLanguage(id, alsoDevice = false); ctx.findActivity()?.recreate() }) {
+                                Text(stringResource(R.string.lang_device_app_only))
+                            }
+                            TextButton(onClick = { pendingLang = null }) { Text(stringResource(R.string.common_cancel)) }
+                        }
+                    },
+                )
+            }
+            Text(stringResource(R.string.settings_language_hint), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        Section(stringResource(R.string.settings_roads), TIcons.Navigation) {
             val universe = caps?.classes?.takeIf { it.isNotEmpty() } ?: if (s.allRoads) Roads.ALL else Roads.STOCK
             Roads.ALL.filter { it in universe }.forEach { c ->
-                SwitchRow(Roads.LABELS[c] ?: c, c in s.allowed) { on ->
+                SwitchRow(Roads.label(c), c in s.allowed) { on ->
                     prefs.update { it.copy(allowed = if (on) it.allowed + c else it.allowed - c) }
                 }
             }
             caps?.let { c ->
                 val missing = Roads.ALL.filter { it !in c.classes }
                 if (c.classes.isNotEmpty() && missing.isNotEmpty())
-                    Text("This OSRM server cannot avoid: ${missing.joinToString { Roads.LABELS[it] ?: it }}. That needs a custom OSRM profile (see osrm-setup.md).",
+                    Text(stringResource(R.string.roads_missing, missing.joinToString { Roads.label(it) }),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             chk.message?.let { Text(it, color = if (chk.blocking) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant) }
             caps?.presets?.takeIf { it.isNotEmpty() }?.let { presets ->
                 HorizontalDivider()
-                Text("Road presets", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.roads_presets), style = MaterialTheme.typography.titleSmall)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(selected = s.presetId.isEmpty(), onClick = { prefs.update { it.copy(presetId = "") } })
-                    Text("None (use class filters)")
+                    Text(stringResource(R.string.roads_presets_none))
                 }
                 presets.forEach { p ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -213,41 +258,41 @@ fun SettingsScreen() {
                 }
             }
             if (caps == null)
-                Text("No capabilities.json found next to OSRM: filters are sent unverified.",
+                Text(stringResource(R.string.roads_no_caps),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        Section("Display", TIcons.Map) {
-            SwitchRow("Imperial units", s.imperial, "mi / ft / mph") { v -> prefs.update { it.copy(imperial = v) }; NavController.onSettingsChanged() }
-            SwitchRow("Heading-up map", s.headingUp) { v -> prefs.update { it.copy(headingUp = v) }; NavController.onSettingsChanged() }
-            SwitchRow("Invert device colors", s.invert) { v -> prefs.update { it.copy(invert = v) }; NavController.onSettingsChanged() }
-            SwitchRow("Show FPS on device", s.showFps) { v -> prefs.update { it.copy(showFps = v) }; NavController.onSettingsChanged() }
+        Section(stringResource(R.string.settings_display), TIcons.Map) {
+            SwitchRow(stringResource(R.string.set_imperial), s.imperial, stringResource(R.string.set_imperial_hint)) { v -> prefs.update { it.copy(imperial = v) }; NavController.onSettingsChanged() }
+            SwitchRow(stringResource(R.string.set_heading_up), s.headingUp) { v -> prefs.update { it.copy(headingUp = v) }; NavController.onSettingsChanged() }
+            SwitchRow(stringResource(R.string.set_invert), s.invert) { v -> prefs.update { it.copy(invert = v) }; NavController.onSettingsChanged() }
+            SwitchRow(stringResource(R.string.set_fps), s.showFps) { v -> prefs.update { it.copy(showFps = v) }; NavController.onSettingsChanged() }
             HorizontalDivider()
-            Text("Device zoom: ${s.zoom} px per 100 m")
+            Text(stringResource(R.string.set_zoom, s.zoom))
             Slider(value = s.zoom.toFloat(), onValueChange = { v -> prefs.update { it.copy(zoom = v.toInt()) } },
                 onValueChangeFinished = { NavController.onSettingsChanged() }, valueRange = 20f..200f)
         }
 
-        Section("GPS", TIcons.MyLocation) {
-            Text("Drop fixes worse than ${s.maxAccuracy} m")
+        Section(stringResource(R.string.settings_gps), TIcons.MyLocation) {
+            Text(stringResource(R.string.set_gps_acc, s.maxAccuracy))
             Slider(value = s.maxAccuracy.toFloat(), onValueChange = { v -> prefs.update { it.copy(maxAccuracy = v.toInt()) } }, valueRange = 10f..100f)
         }
 
-        Section("Contact", TIcons.Info) {
+        Section(stringResource(R.string.settings_contact), TIcons.Info) {
             var email by remember(s.contactEmail) { mutableStateOf(s.contactEmail) }
             val ok = Contact.isValid(email)
             OutlinedTextField(
                 value = email,
                 onValueChange = { v -> email = v; if (Contact.isValid(v)) NavController.setContactEmail(v) },
-                label = { Text("E-mail (sent in the User-Agent)") }, singleLine = true,
+                label = { Text(stringResource(R.string.set_email_label)) }, singleLine = true,
                 isError = !ok, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium,
-                supportingText = { if (!ok) Text("Enter a valid e-mail address") },
+                supportingText = { if (!ok) Text(stringResource(R.string.set_email_error)) },
             )
         }
 
-        Section("About", TIcons.Info) {
+        Section(stringResource(R.string.settings_about), TIcons.Info) {
             Text(
-                "Map data © OpenStreetMap contributors (ODbL). Destinations are sent only to the geocoder and router configured in Advanced. Recents and favorites stay on this phone.",
+                stringResource(R.string.settings_about_text),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -261,9 +306,9 @@ fun SettingsScreen() {
             Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(TIcons.Build, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
                 Column(Modifier.weight(1f)) {
-                    Text("Advanced configuration", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+                    Text(stringResource(R.string.adv_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer)
-                    Text("Server links, firmware sources and developer tools",
+                    Text(stringResource(R.string.adv_sub),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
                 }
                 androidx.compose.material3.Switch(checked = s.advanced, onCheckedChange = { v ->
@@ -273,49 +318,52 @@ fun SettingsScreen() {
             }
         }
 
-        if (s.advanced) {
-            Section("Servers & links", TIcons.Map) {
-                UrlField("OSRM URL", s.osrmUrl) { v -> prefs.update { it.copy(osrmUrl = v.trim()) } }
-                UrlField("OSRM profile", s.profile) { v -> prefs.update { it.copy(profile = v.trim()) } }
-                UrlField("Capabilities URL (empty = OSRM URL + /capabilities.json)", s.capsUrl) { v -> prefs.update { it.copy(capsUrl = v.trim()) } }
-                UrlField("Nominatim URL", s.nominatimUrl) { v -> prefs.update { it.copy(nominatimUrl = v.trim()) } }
-                UrlField("User-Agent (include contact)", s.userAgent) { v -> prefs.update { it.copy(userAgent = v) } }
-                UrlField("Map style URL", s.styleUrl) { v -> prefs.update { it.copy(styleUrl = v.trim()) } }
-                Text(
-                    "The default OSRM server and map style are demos only. Self-host OSRM (road filters need it) and use a real tile provider. Nominatim: 1 request/s, search on button press only.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { NavController.onSettingsChanged() }) { BtnContent(TIcons.Check, "Apply") }
-                    OutlinedButton(onClick = { NavController.onSettingsChanged(); NavController.refreshCapabilities() }) {
-                        BtnContent(TIcons.Refresh, "Reload capabilities")
+        // Reveal carries its own animation; the Column keeps the 14dp rhythm between the cards inside it.
+        Reveal(visible = s.advanced) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Section(stringResource(R.string.adv_servers), TIcons.Map) {
+                    UrlField(stringResource(R.string.adv_osrm_url), s.osrmUrl) { v -> prefs.update { it.copy(osrmUrl = v.trim()) } }
+                    UrlField(stringResource(R.string.adv_osrm_profile), s.profile) { v -> prefs.update { it.copy(profile = v.trim()) } }
+                    UrlField(stringResource(R.string.adv_caps_url), s.capsUrl) { v -> prefs.update { it.copy(capsUrl = v.trim()) } }
+                    UrlField(stringResource(R.string.adv_nominatim_url), s.nominatimUrl) { v -> prefs.update { it.copy(nominatimUrl = v.trim()) } }
+                    UrlField(stringResource(R.string.adv_user_agent), s.userAgent) { v -> prefs.update { it.copy(userAgent = v) } }
+                    UrlField(stringResource(R.string.adv_style_url), s.styleUrl) { v -> prefs.update { it.copy(styleUrl = v.trim()) } }
+                    Text(
+                        stringResource(R.string.adv_servers_note),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { NavController.onSettingsChanged() }) { BtnContent(TIcons.Check, stringResource(R.string.common_apply)) }
+                        OutlinedButton(onClick = { NavController.onSettingsChanged(); NavController.refreshCapabilities() }) {
+                            BtnContent(TIcons.Refresh, stringResource(R.string.adv_reload_caps))
+                        }
+                    }
+                    SwitchRow(stringResource(R.string.adv_all_roads), s.allRoads) { v -> prefs.update { it.copy(allRoads = v) } }
+                }
+
+                Section(stringResource(R.string.adv_fw_sources), TIcons.Refresh) {
+                    UrlField(stringResource(R.string.adv_readme_url), s.readmeUrl) { v -> prefs.update { it.copy(readmeUrl = v) } }
+                    UrlField(stringResource(R.string.adv_bin_url), s.binUrl) { v -> prefs.update { it.copy(binUrl = v) } }
+                    OutlinedTextField(
+                        value = s.githubToken, onValueChange = { v -> prefs.update { it.copy(githubToken = v.trim()) } },
+                        label = { Text(stringResource(R.string.adv_token)) }, singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium,
+                    )
+                    Text(
+                        stringResource(R.string.adv_token_note),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                Section(stringResource(R.string.adv_developer), TIcons.Build) {
+                    SwitchRow(stringResource(R.string.adv_debug), s.debug, stringResource(R.string.adv_debug_hint)) { v ->
+                        prefs.update { it.copy(debug = v) }
+                        if (!v) { NavController.stopSimulation(); NavController.stopReplay() }
                     }
                 }
-                SwitchRow("Show all road types without capabilities.json", s.allRoads) { v -> prefs.update { it.copy(allRoads = v) } }
+                Reveal(visible = s.debug) { DebugPanel() }
             }
-
-            Section("Firmware sources", TIcons.Refresh) {
-                UrlField("README URL (first \"## x.y.z\" line = latest version)", s.readmeUrl) { v -> prefs.update { it.copy(readmeUrl = v) } }
-                UrlField("Firmware .bin URL (raw.githubusercontent.com)", s.binUrl) { v -> prefs.update { it.copy(binUrl = v) } }
-                OutlinedTextField(
-                    value = s.githubToken, onValueChange = { v -> prefs.update { it.copy(githubToken = v.trim()) } },
-                    label = { Text("GitHub token (private repos)") }, singleLine = true,
-                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium,
-                )
-                Text(
-                    "Fine-grained personal access token with read-only \"Contents\" access to the firmware repo. Stored encrypted on this phone and sent only to github.com / raw.githubusercontent.com. Leave empty for a public repo.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            Section("Developer", TIcons.Build) {
-                SwitchRow("Debug mode", s.debug, "Enables the GPS simulator, GPX replay and logs") { v ->
-                    prefs.update { it.copy(debug = v) }
-                    if (!v) { NavController.stopSimulation(); NavController.stopReplay() }
-                }
-            }
-            if (s.debug) DebugPanel()
         }
     }
 }
@@ -389,4 +437,4 @@ private fun DebugPanel() {
             Text(it, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
         }
     }
-}
+}

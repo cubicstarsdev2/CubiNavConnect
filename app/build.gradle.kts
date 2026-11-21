@@ -34,6 +34,10 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
     testOptions { unitTests.isReturnDefaultValues = true }
+
+    base {
+        archivesName.set("CubiNav-Connect-V1.0.0R")
+    }
 }
 
 dependencies {

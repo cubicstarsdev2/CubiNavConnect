@@ -14,15 +14,17 @@ object Roads {
     val ALL = setOf("motorway", "trunk", "avenue", "residential", "toll", "ferry", "unpaved")
     /** What a stock OSRM car profile can avoid; used when the server publishes no capabilities.json. */
     val STOCK = setOf("motorway", "toll", "ferry")
-    val LABELS = mapOf(
-        "motorway" to "Motorways / autopistas",
-        "trunk" to "Highways / routes (trunk)",
-        "avenue" to "Avenues (primary / secondary)",
-        "residential" to "Residential streets",
-        "toll" to "Toll roads",
-        "ferry" to "Ferries",
-        "unpaved" to "Unpaved / tracks",
-    )
+    /** Localized name of a road class (falls back to the raw class id). */
+    fun label(c: String): String = when (c) {
+        "motorway" -> L.s(R.string.road_motorway)
+        "trunk" -> L.s(R.string.road_trunk)
+        "avenue" -> L.s(R.string.road_avenue)
+        "residential" -> L.s(R.string.road_residential)
+        "toll" -> L.s(R.string.road_toll)
+        "ferry" -> L.s(R.string.road_ferry)
+        "unpaved" -> L.s(R.string.road_unpaved)
+        else -> c
+    }
 }
 
 data class Dest(val lat: Double, val lon: Double, val label: String, val confirmed: Boolean = true)
@@ -42,6 +44,8 @@ data class Settings(
     val invert: Boolean = false,
     val showFps: Boolean = false,
     val zoom: Int = 60,
+    val onboardSkipped: Boolean = false, // user chose "set up later" on the find-device screen
+    val language: Int = Lang.EN,       // app + device language id (see Lang); picked in the setup wizard
     val allowed: Set<String> = Roads.ALL,
     val maxAccuracy: Int = 50,
     val deviceAddress: String = "",
@@ -105,6 +109,8 @@ class Prefs(ctx: Context) {
             invert = sp.getBoolean("invert", d.invert),
             showFps = sp.getBoolean("showFps", d.showFps),
             zoom = sp.getInt("zoom", d.zoom),
+            onboardSkipped = sp.getBoolean("onboardSkipped", d.onboardSkipped),
+            language = sp.getInt("language", d.language).let { if (Lang.valid(it)) it else Lang.EN },
             // roadsV < 2: the class list changed, so older saved sets would silently forbid the new classes
             allowed = if (sp.getInt("roadsV", 0) < 2) d.allowed
             else sp.getString("allowed", null)?.split(',')?.filter { it.isNotEmpty() }?.toSet() ?: d.allowed,
@@ -136,7 +142,7 @@ class Prefs(ctx: Context) {
             .putString("contactEmail", n.contactEmail).putString("githubToken", n.githubToken)
             .putString("styleUrl", n.styleUrl).putBoolean("imperial", n.imperial)
             .putBoolean("headingUp", n.headingUp).putBoolean("invert", n.invert)
-            .putBoolean("showFps", n.showFps).putInt("zoom", n.zoom)
+            .putBoolean("showFps", n.showFps).putInt("zoom", n.zoom).putInt("language", n.language).putBoolean("onboardSkipped", n.onboardSkipped)
             .putString("allowed", n.allowed.joinToString(",")).putInt("maxAccuracy", n.maxAccuracy)
             .putString("deviceAddress", n.deviceAddress).putString("deviceName", n.deviceName)
             .putBoolean("debug", n.debug).putBoolean("advanced", n.advanced).putInt("roadsV", 2)

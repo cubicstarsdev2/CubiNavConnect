@@ -207,7 +207,7 @@ fun ScreenTitle(icon: ImageVector, title: String, subtitle: String? = null) {
 @Composable
 fun Section(title: String, icon: ImageVector, content: @Composable ColumnScope.() -> Unit) {
     Card(
-        Modifier.fillMaxWidth(),
+        Modifier.fillMaxWidth().smoothSize(),   // messages / progress / lists appearing inside ease the card's height
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
     ) {
@@ -281,11 +281,11 @@ fun bleColor(s: BleState): Color = when (s) {
     else -> MaterialTheme.colorScheme.tertiary
 }
 
-fun bleLabel(s: BleState): String = when (s) {
-    BleState.OFF -> "Bluetooth off"
-    BleState.IDLE -> "Disconnected"
-    BleState.CONNECTING -> "Connecting"
-    BleState.BONDING -> "Pairing"
-    BleState.CONNECTED -> "Connected"
-    BleState.RECONNECTING -> "Reconnecting"
-}
+fun bleLabel(s: BleState): String = L.s(when (s) {
+    BleState.OFF -> R.string.ble_off
+    BleState.IDLE -> R.string.ble_idle
+    BleState.CONNECTING -> R.string.ble_connecting
+    BleState.BONDING -> R.string.ble_bonding
+    BleState.CONNECTED -> R.string.ble_connected
+    BleState.RECONNECTING -> R.string.ble_reconnecting
+})

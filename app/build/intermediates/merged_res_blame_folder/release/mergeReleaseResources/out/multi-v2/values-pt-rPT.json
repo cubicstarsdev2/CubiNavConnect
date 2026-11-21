@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.tahvia.nav.app-mergeReleaseResources-47:/values-pt-rPT/values-pt-rPT.xml",
+            "outputFile": "com.cubicl.cubinavconnect.app-mergeReleaseResources-47:/values-pt-rPT/values-pt-rPT.xml",
             "map": [
                 {
                     "source": "C:\\Users\\Tahiel\\.gradle\\caches\\9.6.0\\transforms\\1d80240121903d3919b4dd05cf3c8103\\transformed\\android-sdk-11.8.0\\res\\values-pt-rPT\\values-pt-rPT.xml",

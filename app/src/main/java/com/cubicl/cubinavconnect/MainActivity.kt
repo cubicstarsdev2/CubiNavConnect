@@ -1,6 +1,7 @@
 package com.cubicl.cubinavconnect
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -8,10 +9,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,6 +40,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -53,6 +60,11 @@ import androidx.core.content.ContextCompat
 import org.maplibre.android.MapLibre
 
 class MainActivity : ComponentActivity() {
+    /** The app language is chosen in the app (setup wizard / Settings), independent of the phone's locale. */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(Lang.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         NavController.init(applicationContext)
@@ -110,23 +122,21 @@ private fun ContactGate() {
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically),
         ) {
-            Text("One last thing", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.contact_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Text(
-                "The public routing, search and map servers ask every app to identify itself with a contact " +
-                        "email, and they block requests that don't. Without it, routes and address search won't work.",
+                stringResource(R.string.contact_body),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OutlinedTextField(
                 value = email, onValueChange = { email = it },
-                label = { Text("Contact email") },
+                label = { Text(stringResource(R.string.contact_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Done),
             )
             Text(
-                "It is only sent as part of the User-Agent header to the servers you configure. " +
-                        "You can change it later in Settings > Advanced configuration.",
+                stringResource(R.string.contact_hint),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Button(
@@ -136,7 +146,7 @@ private fun ContactGate() {
                     NavController.refreshCapabilities()     // the first capabilities.json request went out with the placeholder
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-            ) { Text("Continue") }
+            ) { Text(stringResource(R.string.common_continue)) }
         }
     }
 }
@@ -161,6 +171,40 @@ fun App() {
     }
 }
 
+private enum class Stage { PERMISSIONS, CONTACT, SETUP, FIND, MAIN }
+
+/** README 9: explain first, then ask; handle "denied" with a clear message. */
+@Composable
+private fun PermissionScreen(onGrant: () -> Unit) {
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically),
+        ) {
+            Icon(TIcons.Navigation, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.perm_welcome), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.perm_intro), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(4.dp))
+            PermissionRow(TIcons.MyLocation, stringResource(R.string.perm_location), stringResource(R.string.perm_location_body))
+            PermissionRow(TIcons.Bluetooth, stringResource(R.string.perm_nearby), stringResource(R.string.perm_nearby_body))
+            PermissionRow(TIcons.Notifications, stringResource(R.string.perm_notifications), stringResource(R.string.perm_notifications_body))
+            Text(
+                stringResource(R.string.perm_privacy),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Button(onClick = onGrant, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                Icon(TIcons.Check, null, Modifier.size(20.dp))
+                Spacer(Modifier.size(8.dp))
+                Text(stringResource(R.string.perm_grant))
+            }
+            Text(
+                stringResource(R.string.perm_denied_hint),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
 @Composable
 private fun AppContent() {
     val ctx = LocalContext.current
@@ -174,56 +218,57 @@ private fun AppContent() {
         granted = allGranted()
     }
 
-    if (!granted) {
-        // README 9: explain first, then ask; handle "denied" with a clear message.
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically),
-            ) {
-                Icon(TIcons.Navigation, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.primary)
-                Text("Welcome to CubiNav", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                Text("A few permissions are needed before you can drive.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(4.dp))
-                PermissionRow(TIcons.MyLocation, "Location", "Shows your position and guides you along the route.")
-                PermissionRow(TIcons.Bluetooth, "Nearby devices", "Finds and talks to your CubiNav display.")
-                PermissionRow(TIcons.Notifications, "Notifications", "Keeps navigation running with the screen off.")
-                Text(
-                    "Nothing leaves the phone except the destination you search for, sent to the geocoder and router you configure.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Button(onClick = { launcher.launch(requiredPermissions()) }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                    Icon(TIcons.Check, null, Modifier.size(20.dp))
-                    Spacer(Modifier.size(8.dp))
-                    Text("Grant permissions")
-                }
-                Text(
-                    "If you denied them before, enable them in Android Settings > Apps > CubiNav > Permissions.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+    LaunchedEffect(granted) {
+        if (granted) {
+            NavController.ensureLocation()
+            NavController.autoConnect()
         }
-        return
-    }
-
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        NavController.ensureLocation()
-        NavController.autoConnect()
     }
 
     // Contact email: required before the app is usable (the User-Agent is sent to OSRM, Nominatim, GitHub).
     val settings by NavController.prefs.settings.collectAsState()
-    if (!hasContact(settings)) {
-        ContactGate()
-        return
+
+    // First-time setup: the device says "not configured" in HELLO_ACK (or a setup transfer is running).
+    val deviceConfigured by NavController.deviceConfigured.collectAsState()
+    val setupUi by NavController.setup.collectAsState()
+    // First run (no saved device): "find your CubiNav" first. Existing users with a saved device never see it.
+    var findActive by remember { mutableStateOf(settings.deviceAddress.isEmpty() && !settings.onboardSkipped) }
+    LaunchedEffect(deviceConfigured) { if (deviceConfigured != null) findActive = false }
+
+    val stage = when {
+        !granted -> Stage.PERMISSIONS
+        !hasContact(settings) -> Stage.CONTACT
+        deviceConfigured == false || setupUi.state != SetupState.NOT_STARTED -> Stage.SETUP
+        findActive -> Stage.FIND
+        else -> Stage.MAIN
     }
 
+    // One switch for the whole gate chain, so moving between stages fades through instead of cutting.
+    AnimatedContent(targetState = stage, transitionSpec = { fadeThrough() }, label = "stage") { s ->
+        // The wizard reads global state; once it is finished that state resets, so freeze it while it fades out.
+        val leaving = transition.targetState == EnterExitState.PostExit
+        when (s) {
+            Stage.PERMISSIONS -> PermissionScreen { launcher.launch(requiredPermissions()) }
+            Stage.CONTACT -> ContactGate()
+            Stage.SETUP -> SetupWizard(frozen = leaving)
+            Stage.FIND -> FindDeviceScreen(onSkip = { findActive = false; NavController.skipOnboarding() })
+            Stage.MAIN -> MainTabs()
+        }
+    }
+}
+
+@Composable
+private fun MainTabs() {
     var tab by remember { mutableStateOf(0) }
     val tabs = listOf(
-        "Map" to TIcons.Map,
-        "Device" to TIcons.Bluetooth,
-        "Settings" to TIcons.Settings,
+        stringResource(R.string.tab_map) to TIcons.Map,
+        stringResource(R.string.tab_device) to TIcons.Bluetooth,
+        stringResource(R.string.tab_settings) to TIcons.Settings,
     )
+    // The page behind Device/Settings fades in with the tab instead of popping over the map.
+    val scrim by animateFloatAsState(if (tab != 0) 1f else 0f, tween(Motion.MEDIUM), label = "tabScrim")
+    val bg = MaterialTheme.colorScheme.background
+
     Scaffold(bottomBar = {
         NavigationBar {
             tabs.forEachIndexed { i, (label, icon) ->
@@ -238,12 +283,21 @@ private fun AppContent() {
         Box(Modifier.fillMaxSize().padding(pad)) {
             // The map stays composed under the other tabs so the MapView keeps its lifecycle and state.
             MapScreen()
-            if (tab != 0) {
-                Surface(
-                    Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { } },
-                    color = MaterialTheme.colorScheme.background,
-                ) {
-                    when (tab) {
+            // Not a Surface: M3's Surface always installs a pointerInput that swallows touches, which would
+            // make this full-screen layer block the map even on the Map tab. Only block when another tab is up.
+            Box(
+                Modifier.fillMaxSize()
+                    .background(bg.copy(alpha = scrim))
+                    .then(if (tab != 0) Modifier.pointerInput(Unit) { detectTapGestures { } } else Modifier),
+            ) {
+                // Tabs slide a little toward the direction you are going (Map < Device < Settings).
+                AnimatedContent(
+                    targetState = tab,
+                    transitionSpec = { slideThrough(forward = targetState > initialState) },
+                    label = "tab",
+                ) { t ->
+                    when (t) {
+                        0 -> Spacer(Modifier.fillMaxSize())   // map tab: nothing on top of the map
                         1 -> DeviceScreen()
                         else -> SettingsScreen()
                     }

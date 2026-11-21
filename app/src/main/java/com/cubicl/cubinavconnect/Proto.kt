@@ -3,7 +3,9 @@ package com.cubicl.cubinavconnect
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-data class HelloAck(val proto: Int, val fw: Int, val screenW: Int, val screenH: Int, val maxPoints: Int)
+/** [configured]: HELLO_ACK byte 10 (optional, FW 1.5.0+): 0 = first-time setup not done, 1 = configured. Older firmware omits it = configured. */
+data class HelloAck(val proto: Int, val fw: Int, val screenW: Int, val screenH: Int, val maxPoints: Int, val configured: Boolean = true)
+data class SetupAck(val status: Int)
 data class RouteAck(val routeId: Int, val status: Int, val expectedIdx: Int, val freeSlots: Int)
 data class OtaAck(val status: Int, val state: Int, val next: Long, val window: Int, val ackEvery: Int)
 
@@ -28,6 +30,22 @@ object Proto {
     const val HELLO_ACK = 0x81
     const val ROUTE_ACK = 0x82
     const val OTA_ACK = 0x83
+    const val SETUP_CONFIG = 0x41   // phone -> device: persistent first-time setup (CONFIG 0x40 stays the volatile runtime one)
+    const val SETUP_ACK = 0x84      // device -> phone: [0x84][status]
+
+    // SETUP_CONFIG: [0x41][schema u8][language u8][flags u8][zoom u16 LE] = 6 bytes
+    const val SETUP_SCHEMA = 1
+    const val SETUP_LEN = 6
+    const val CFG_MASK = 0x0F       // reserved flag bits must be zero
+    const val ZOOM_MIN = 5          // firmware-accepted range
+    const val ZOOM_MAX = 2000
+
+    // SETUP_ACK status codes
+    const val SETUP_OK = 0
+    const val SETUP_E_VERSION = 1
+    const val SETUP_E_LANGUAGE = 2
+    const val SETUP_E_SETTINGS = 3
+    const val SETUP_E_NVS = 4
 
     // OTA_ACK status codes
     const val OTA_OK = 0
@@ -118,6 +136,15 @@ object Proto {
 
     fun navState(state: Int) = byteArrayOf(u8(NAV_STATE), u8(state))
 
+    fun setupConfig(language: Int, flags: Int, zoom: Int): ByteArray =
+        buf(SETUP_LEN).put(u8(SETUP_CONFIG)).put(u8(SETUP_SCHEMA)).put(u8(language)).put(u8(flags and CFG_MASK))
+            .putShort(u16(zoom.coerceIn(ZOOM_MIN, ZOOM_MAX))).array()
+
+    fun parseSetupAck(d: ByteArray): SetupAck? {
+        if (d.size < 2 || (d[0].toInt() and 0xFF) != SETUP_ACK) return null
+        return SetupAck(d[1].toInt() and 0xFF)
+    }
+
     fun otaBegin(size: Long, md5: ByteArray, version: Int): ByteArray {
         require(md5.size == 16)
         return buf(23).put(u8(OTA_BEGIN)).putInt(size.toInt()).put(md5).putShort(u16(version)).array()
@@ -154,7 +181,8 @@ object Proto {
         val w = b.short.toInt() and 0xFFFF
         val h = b.short.toInt() and 0xFFFF
         val mp = b.short.toInt() and 0xFFFF
-        return HelloAck(proto, fw, w, h, mp)
+        val configured = if (d.size >= 11) d[10].toInt() != 0 else true
+        return HelloAck(proto, fw, w, h, mp, configured)
     }
 
     fun parseRouteAck(d: ByteArray): RouteAck? {
@@ -176,6 +204,7 @@ object Proto {
         HELLO_ACK -> "HELLO_ACK"; ROUTE_ACK -> "ROUTE_ACK"
         OTA_BEGIN -> "OTA_BEGIN"; OTA_CHUNK -> "OTA_CHUNK"; OTA_END -> "OTA_END"
         OTA_ABORT -> "OTA_ABORT"; OTA_ACK -> "OTA_ACK"
+        SETUP_CONFIG -> "SETUP_CONFIG"; SETUP_ACK -> "SETUP_ACK"
         else -> "0x%02X".format(type)
     }
 }

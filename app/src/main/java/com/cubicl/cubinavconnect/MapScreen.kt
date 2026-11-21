@@ -1,5 +1,6 @@
 package com.cubicl.cubinavconnect
 
+import androidx.compose.ui.res.stringResource
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -46,6 +48,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.AlertDialog
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -196,13 +200,16 @@ private fun TurnBanner(progress: Progress?, phase: Phase, imperial: Boolean) {
         val tint = MaterialTheme.colorScheme.onPrimaryContainer
         Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            ManeuverIcon(if (phase == Phase.ARRIVED) 10 else progress?.icon ?: 1, tint, 46.dp)
+            Crossfade(
+                targetState = if (phase == Phase.ARRIVED) 10 else progress?.icon ?: 1,
+                animationSpec = tween(Motion.SHORT), label = "maneuver",
+            ) { code -> ManeuverIcon(code, tint, 46.dp) }
             Column(Modifier.weight(1f)) {
                 val head = when {
-                    phase == Phase.ARRIVED -> "You have arrived"
-                    progress == null -> "Starting..."
+                    phase == Phase.ARRIVED -> stringResource(R.string.nav_arrived)
+                    progress == null -> stringResource(R.string.nav_starting)
                     progress.distToTurn != null -> fmtDist(progress.distToTurn.toDouble(), imperial)
-                    else -> "Continue"
+                    else -> stringResource(R.string.nav_continue)
                 }
                 Text(head, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = tint)
                 if (phase != Phase.ARRIVED && progress != null && progress.street.isNotEmpty())
@@ -274,7 +281,7 @@ fun MapScreen() {
         mapView.getMapAsync { m ->
             map = m
             m.addOnMapLongClickListener { ll ->
-                val lbl = "%.5f, %.5f".format(ll.latitude, ll.longitude)
+                val lbl = "%.5f, %.5f".format(java.util.Locale.US, ll.latitude, ll.longitude)
                 if (addingStop) NavController.addWaypoint(ll.latitude, ll.longitude, lbl)
                 else NavController.setDestination(ll.latitude, ll.longitude, lbl)
                 true
@@ -356,191 +363,235 @@ fun MapScreen() {
         AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize())
 
         // ---- top: turn banner or search, results, notices ----
-        Column(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (navigating) TurnBanner(progress, phase, settings.imperial)
-            if (navigating && phase != Phase.ARRIVED && speedLimit > 0) SpeedSign(speedLimit, settings.imperial)
+        // No spacedBy on this Column: a hidden Reveal would still reserve a gap. Each Reveal carries its own bottom gap.
+        Column(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(10.dp)) {
+            val bannerProgress = rememberWhileVisible(progress, navigating)
+            val bannerPhase = rememberWhileVisible(phase, navigating)
+            Reveal(navigating, gap = 8.dp, clip = false) { TurnBanner(bannerProgress, bannerPhase, settings.imperial) }
 
-            if (!navigating || addingStop) {
-                Surface(shape = CircleShape, shadowElevation = 8.dp, tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(start = 16.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(if (addingStop) TIcons.Add else TIcons.Pin, null, tint = cs.primary)
-                        TextField(
-                            value = query, onValueChange = { query = it }, singleLine = true,
-                            modifier = Modifier.weight(1f),
-                            placeholder = { Text(if (addingStop) "Add a waypoint" else "Where to? Address or lat, lon") },
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                                unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                                disabledContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                                focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                                unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                            ),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = { NavController.submitQuery(query, addingStop) }),
-                        )
-                        if (searching) CircularProgressIndicator(Modifier.padding(end = 10.dp).size(24.dp), strokeWidth = 2.dp)
-                        else if (query.isNotBlank()) {
-                            IconButton(onClick = { query = "" }) { Icon(TIcons.Clear, "Clear") }
-                            FilledIconButton(onClick = { NavController.submitQuery(query, addingStop) }) { Icon(TIcons.Search, "Search") }
-                        }
-                    }
-                }
-                if (addingStop || phase == Phase.IDLE) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val chipColors = AssistChipDefaults.assistChipColors(containerColor = cs.surface)
-                        if (addingStop) AssistChip(onClick = { addingStop = false; query = "" }, colors = chipColors,
-                            label = { Text("Cancel waypoint") }, leadingIcon = { Icon(TIcons.Close, null, Modifier.size(18.dp)) })
-                        else AssistChip(onClick = { loader.launch(arrayOf("*/*")) }, colors = chipColors,
-                            label = { Text("Load route") }, leadingIcon = { Icon(TIcons.List, null, Modifier.size(18.dp)) })
-                    }
-                }
-                if (results.isNotEmpty()) {
-                    Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = cs.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)) {
-                        Column(Modifier.heightIn(max = 260.dp).verticalScroll(rememberScrollState())) {
-                            results.forEach { p ->
-                                ListItem(
-                                    headlineContent = { Text(p.name, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                                    supportingContent = { Text(p.type) },
-                                    leadingContent = { Icon(TIcons.Pin, null, tint = cs.primary) },
-                                    colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-                                    modifier = Modifier.clickable {
-                                        if (addingStop) NavController.addWaypoint(p.lat, p.lon, p.name)
-                                        else NavController.setDestination(p.lat, p.lon, p.name)
-                                    },
-                                )
+            val showSpeed = navigating && phase != Phase.ARRIVED && speedLimit > 0
+            val shownSpeed = rememberWhileVisible(speedLimit, showSpeed)
+            Reveal(showSpeed, gap = 8.dp, clip = false) { SpeedSign(shownSpeed, settings.imperial) }
+
+            Reveal(!navigating || addingStop, gap = 8.dp, clip = false) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(shape = CircleShape, shadowElevation = 8.dp, tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(start = 16.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(if (addingStop) TIcons.Add else TIcons.Pin, null, tint = cs.primary)
+                            TextField(
+                                value = query, onValueChange = { query = it }, singleLine = true,
+                                modifier = Modifier.weight(1f),
+                                placeholder = { Text(stringResource(if (addingStop) R.string.map_add_waypoint else R.string.map_where_to)) },
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                                    unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                                    disabledContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                                    focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                                    unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                                ),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(onSearch = { NavController.submitQuery(query, addingStop) }),
+                            )
+                            if (searching) CircularProgressIndicator(Modifier.padding(end = 10.dp).size(24.dp), strokeWidth = 2.dp)
+                            else if (query.isNotBlank()) {
+                                IconButton(onClick = { query = "" }) { Icon(TIcons.Clear, stringResource(R.string.common_clear)) }
+                                FilledIconButton(onClick = { NavController.submitQuery(query, addingStop) }) { Icon(TIcons.Search, stringResource(R.string.common_search)) }
                             }
                         }
                     }
-                } else if (query.isBlank() && dest == null && (recents.isNotEmpty() || favorites.isNotEmpty())) {
-                    Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = cs.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)) {
-                        Column(Modifier.heightIn(max = 240.dp).verticalScroll(rememberScrollState())) {
-                            (favorites.map { true to it } + recents.map { false to it }).take(8).forEach { (fav, d) ->
-                                ListItem(
-                                    headlineContent = { Text(d.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                    leadingContent = {
-                                        Icon(if (fav) TIcons.Star else TIcons.Pin, null,
-                                            tint = if (fav) cs.tertiary else cs.onSurfaceVariant)
-                                    },
-                                    colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-                                    modifier = Modifier.clickable { NavController.setDestination(d.lat, d.lon, d.label) },
-                                )
+                    if (addingStop || phase == Phase.IDLE) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val chipColors = AssistChipDefaults.assistChipColors(containerColor = cs.surface)
+                            if (addingStop) AssistChip(onClick = { addingStop = false; query = "" }, colors = chipColors,
+                                label = { Text(stringResource(R.string.map_cancel_waypoint)) }, leadingIcon = { Icon(TIcons.Close, null, Modifier.size(18.dp)) })
+                            else AssistChip(onClick = { loader.launch(arrayOf("*/*")) }, colors = chipColors,
+                                label = { Text(stringResource(R.string.map_load_route)) }, leadingIcon = { Icon(TIcons.List, null, Modifier.size(18.dp)) })
+                        }
+                    }
+                    // search results <-> recent places cross-fade (and the area eases to the new height) instead of popping
+                    val shownResults = rememberWhileVisible(results, results.isNotEmpty())
+                    val showRecents = results.isEmpty() && query.isBlank() && dest == null && (recents.isNotEmpty() || favorites.isNotEmpty())
+                    SoftSwap(if (results.isNotEmpty()) 1 else if (showRecents) 2 else 0, label = "searchList") { mode ->
+                        when (mode) {
+                            1 -> Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = cs.surface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)) {
+                                Column(Modifier.heightIn(max = 260.dp).verticalScroll(rememberScrollState())) {
+                                    shownResults.forEach { p ->
+                                        ListItem(
+                                            headlineContent = { Text(p.name, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                                            supportingContent = { Text(p.type) },
+                                            leadingContent = { Icon(TIcons.Pin, null, tint = cs.primary) },
+                                            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                                            modifier = Modifier.clickable {
+                                                if (addingStop) NavController.addWaypoint(p.lat, p.lon, p.name)
+                                                else NavController.setDestination(p.lat, p.lon, p.name)
+                                            },
+                                        )
+                                    }
+                                }
                             }
+                            2 -> Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = cs.surface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)) {
+                                Column(Modifier.heightIn(max = 240.dp).verticalScroll(rememberScrollState())) {
+                                    (favorites.map { true to it } + recents.map { false to it }).take(8).forEach { (fav, d) ->
+                                        ListItem(
+                                            headlineContent = { Text(d.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                            leadingContent = {
+                                                Icon(if (fav) TIcons.Star else TIcons.Pin, null,
+                                                    tint = if (fav) cs.tertiary else cs.onSurfaceVariant)
+                                            },
+                                            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                                            modifier = Modifier.clickable { NavController.setDestination(d.lat, d.lon, d.label) },
+                                        )
+                                    }
+                                }
+                            }
+                            else -> Spacer(Modifier.size(0.dp))
                         }
                     }
                 }
             }
-            banner?.let { NoteBar(TIcons.Warning, it, cs.errorContainer, cs.onErrorContainer) }
-            if (phase == Phase.REROUTING) NoteBar(TIcons.Refresh, "Rerouting...", cs.tertiaryContainer, cs.onTertiaryContainer)
+
+            val shownBanner = rememberWhileVisible(banner, banner != null)
+            Reveal(banner != null, gap = 8.dp, clip = false) {
+                shownBanner?.let { NoteBar(TIcons.Warning, it, cs.errorContainer, cs.onErrorContainer) }
+            }
+            Reveal(phase == Phase.REROUTING, gap = 8.dp, clip = false) {
+                NoteBar(TIcons.Refresh, stringResource(R.string.status_rerouting), cs.tertiaryContainer, cs.onTertiaryContainer)
+            }
         }
 
         // ---- bottom: destination / trip card ----
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (!follow) SmallFloatingActionButton(
-                onClick = { follow = true; fix?.let { map?.easeCamera(CameraUpdateFactory.newLatLng(LatLng(it.lat, it.lon)), 400) } },
-                modifier = Modifier.align(Alignment.End),
-                containerColor = cs.surface, contentColor = cs.primary,
-            ) { Icon(TIcons.MyLocation, "Recenter") }
+            Pop(visible = !follow, modifier = Modifier.align(Alignment.End)) {
+                SmallFloatingActionButton(
+                    onClick = { follow = true; fix?.let { map?.easeCamera(CameraUpdateFactory.newLatLng(LatLng(it.lat, it.lon)), 400) } },
+                    containerColor = cs.surface, contentColor = cs.primary,
+                ) { Icon(TIcons.MyLocation, stringResource(R.string.map_recenter)) }
+            }
 
             Surface(shape = RoundedCornerShape(24.dp), shadowElevation = 10.dp, tonalElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // smoothSize is on the Column *inside* the Surface so the card's shadow is not clipped while it resizes.
+                // No spacedBy: each Reveal below carries its own 10dp gap, so hidden sections leave no hole.
+                Column(Modifier.smoothSize().padding(16.dp)) {
                     val d = dest
 
                     // -- destination preview --
-                    if (d != null && (phase == Phase.IDLE || phase == Phase.ROUTING)) {
-                        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Icon(TIcons.Pin, null, tint = cs.error)
-                            Column(Modifier.weight(1f)) {
-                                Text(d.label, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                note?.let { Text(it, color = cs.error, style = MaterialTheme.typography.bodySmall) }
-                                road.message?.let { Text(it, color = cs.error, style = MaterialTheme.typography.bodySmall) }
+                    val showDest = d != null && (phase == Phase.IDLE || phase == Phase.ROUTING)
+                    val destShown = rememberWhileVisible(d, showDest)
+                    val destPhase = rememberWhileVisible(phase, showDest)
+                    val destNote = rememberWhileVisible(note, showDest)
+                    val destRoad = rememberWhileVisible(road, showDest)
+                    val destNoRoute = rememberWhileVisible(noRoute, showDest)
+                    Reveal(showDest, gap = 10.dp) {
+                        destShown?.let { dd ->
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Icon(TIcons.Pin, null, tint = cs.error)
+                                    Column(Modifier.weight(1f)) {
+                                        Text(dd.label, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                                            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                        destNote?.let { Text(it, color = cs.error, style = MaterialTheme.typography.bodySmall) }
+                                        destRoad.message?.let { Text(it, color = cs.error, style = MaterialTheme.typography.bodySmall) }
+                                    }
+                                    val isFav = remember(favorites, dd) { NavController.prefs.isFavorite(dd) }
+                                    IconButton(onClick = { NavController.prefs.toggleFavorite(dd) }) {
+                                        Icon(if (isFav) TIcons.Favorite else TIcons.FavoriteBorder, stringResource(if (isFav) R.string.map_unstar else R.string.map_star),
+                                            tint = if (isFav) cs.error else cs.onSurfaceVariant)
+                                    }
+                                    IconButton(onClick = { NavController.clearDestination() }) { Icon(TIcons.Close, stringResource(R.string.common_clear)) }
+                                }
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    if (!dd.confirmed) Button(onClick = { NavController.confirmDestination() }, modifier = Modifier.weight(1f)) {
+                                        BtnContent(TIcons.Check, stringResource(R.string.map_confirm_point))
+                                    } else Button(
+                                        onClick = { NavController.startNavigation() }, modifier = Modifier.weight(1f),
+                                        enabled = destPhase == Phase.IDLE && fix != null && !destRoad.blocking,
+                                    ) { BtnContent(TIcons.Navigation, stringResource(if (destPhase == Phase.ROUTING) R.string.map_routing else R.string.common_start)) }
+                                    FilledTonalButton(
+                                        onClick = { NavController.startNavigation(phoneOnly = true) }, modifier = Modifier.weight(1f),
+                                        enabled = destPhase == Phase.IDLE && fix != null && !destRoad.blocking,
+                                    ) { BtnContent(TIcons.Map, stringResource(R.string.map_route_only)) }
+                                }
+                                if (destNoRoute) Button(onClick = { NavController.relaxFilters() }, modifier = Modifier.fillMaxWidth()) {
+                                    BtnContent(TIcons.Refresh, stringResource(R.string.map_relax))
+                                }
                             }
-                            val isFav = remember(favorites, d) { NavController.prefs.isFavorite(d) }
-                            IconButton(onClick = { NavController.prefs.toggleFavorite(d) }) {
-                                Icon(if (isFav) TIcons.Favorite else TIcons.FavoriteBorder, if (isFav) "Unstar" else "Star",
-                                    tint = if (isFav) cs.error else cs.onSurfaceVariant)
-                            }
-                            IconButton(onClick = { NavController.clearDestination() }) { Icon(TIcons.Close, "Clear") }
-                        }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (!d.confirmed) Button(onClick = { NavController.confirmDestination() }, modifier = Modifier.weight(1f)) {
-                                BtnContent(TIcons.Check, "Confirm point")
-                            } else Button(
-                                onClick = { NavController.startNavigation() }, modifier = Modifier.weight(1f),
-                                enabled = phase == Phase.IDLE && fix != null && !road.blocking,
-                            ) { BtnContent(TIcons.Navigation, if (phase == Phase.ROUTING) "Routing..." else "Start") }
-                            FilledTonalButton(
-                                onClick = { NavController.startNavigation(phoneOnly = true) }, modifier = Modifier.weight(1f),
-                                enabled = phase == Phase.IDLE && fix != null && !road.blocking,
-                            ) { BtnContent(TIcons.Map, "Route only") }
-                        }
-                        if (noRoute) Button(onClick = { NavController.relaxFilters() }, modifier = Modifier.fillMaxWidth()) {
-                            BtnContent(TIcons.Refresh, "Relax road filters")
                         }
                     }
 
                     // -- waypoints --
-                    if (d != null && phase != Phase.ARRIVED) {
-                        if (phase == Phase.IDLE || phase == Phase.ROUTING) HorizontalDivider()
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(if (waypoints.isEmpty()) "No waypoints" else "Waypoints (${waypoints.size})",
-                                style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f))
-                            IconButton(onClick = { saver.launch(NavController.suggestedRouteName()) }) { Icon(TIcons.Save, "Save route") }
-                            TextButton(onClick = { addingStop = !addingStop }) {
-                                BtnContent(if (addingStop) TIcons.Close else TIcons.Add, if (addingStop) "Cancel" else "Waypoint")
-                            }
-                        }
-                        if (waypoints.isNotEmpty()) Column(Modifier.heightIn(max = 120.dp).verticalScroll(rememberScrollState())) {
-                            waypoints.forEachIndexed { i, w ->
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Surface(shape = CircleShape, color = cs.primary) {
-                                        Text("${i + 1}", Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                            color = cs.onPrimary, style = MaterialTheme.typography.labelMedium)
-                                    }
-                                    Text(w.label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                                    if (i > 0) IconButton(onClick = { NavController.moveWaypointUp(i) }) { Icon(TIcons.Up, "Move up") }
-                                    IconButton(onClick = { NavController.removeWaypoint(i) }) { Icon(TIcons.Delete, "Remove") }
+                    val showWp = d != null && phase != Phase.ARRIVED
+                    val wpPhase = rememberWhileVisible(phase, showWp)
+                    val wpList = rememberWhileVisible(waypoints, showWp)
+                    val wpDirty = rememberWhileVisible(planDirty, showWp)
+                    Reveal(showWp, gap = 10.dp) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            if (wpPhase == Phase.IDLE || wpPhase == Phase.ROUTING) HorizontalDivider()
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text(if (wpList.isEmpty()) stringResource(R.string.map_no_waypoints) else stringResource(R.string.map_waypoints, wpList.size),
+                                    style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f))
+                                IconButton(onClick = { saver.launch(NavController.suggestedRouteName()) }) { Icon(TIcons.Save, stringResource(R.string.map_save_route)) }
+                                TextButton(onClick = { addingStop = !addingStop }) {
+                                    BtnContent(if (addingStop) TIcons.Close else TIcons.Add, stringResource(if (addingStop) R.string.common_cancel else R.string.map_waypoint_btn))
                                 }
                             }
-                        }
-                        if (planDirty && (phase == Phase.NAVIGATING || phase == Phase.REROUTING))
-                            Button(onClick = { NavController.applyPlan() }, modifier = Modifier.fillMaxWidth()) {
-                                BtnContent(TIcons.Refresh, "Apply changes (reroute)")
+                            if (wpList.isNotEmpty()) Column(Modifier.heightIn(max = 120.dp).verticalScroll(rememberScrollState())) {
+                                wpList.forEachIndexed { i, w ->
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Surface(shape = CircleShape, color = cs.primary) {
+                                            Text("${i + 1}", Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                                color = cs.onPrimary, style = MaterialTheme.typography.labelMedium)
+                                        }
+                                        Text(w.label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                        if (i > 0) IconButton(onClick = { NavController.moveWaypointUp(i) }) { Icon(TIcons.Up, stringResource(R.string.map_move_up)) }
+                                        IconButton(onClick = { NavController.removeWaypoint(i) }) { Icon(TIcons.Delete, stringResource(R.string.map_remove)) }
+                                    }
+                                }
                             }
+                            if (wpDirty && (wpPhase == Phase.NAVIGATING || wpPhase == Phase.REROUTING))
+                                Button(onClick = { NavController.applyPlan() }, modifier = Modifier.fillMaxWidth()) {
+                                    BtnContent(TIcons.Refresh, stringResource(R.string.map_apply_changes))
+                                }
+                        }
                     }
 
                     // -- trip summary --
-                    if (phase != Phase.IDLE && phase != Phase.ROUTING) {
-                        if (d != null && phase != Phase.ARRIVED) HorizontalDivider()
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Column(Modifier.weight(1f)) {
-                                progress?.let {
-                                    Text(fmtDist(it.remainingM, settings.imperial), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                                    Text(fmtDuration(it.remainingS) + " left", color = cs.onSurfaceVariant)
-                                } ?: Text("Calculating...", color = cs.onSurfaceVariant)
+                    val showTrip = phase != Phase.IDLE && phase != Phase.ROUTING
+                    val tripPhase = rememberWhileVisible(phase, showTrip)
+                    val tripProgress = rememberWhileVisible(progress, showTrip)
+                    val tripHasDest = rememberWhileVisible(d != null, showTrip)
+                    Reveal(showTrip, gap = 10.dp) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            if (tripHasDest && tripPhase != Phase.ARRIVED) HorizontalDivider()
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Column(Modifier.weight(1f)) {
+                                    tripProgress?.let {
+                                        Text(fmtDist(it.remainingM, settings.imperial), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                                        Text(stringResource(R.string.map_time_left, fmtDuration(it.remainingS)), color = cs.onSurfaceVariant)
+                                    } ?: Text(stringResource(R.string.map_calculating), color = cs.onSurfaceVariant)
+                                }
+                                Button(
+                                    onClick = { NavController.stopNavigation() },
+                                    colors = if (tripPhase == Phase.ARRIVED) ButtonDefaults.buttonColors()
+                                    else ButtonDefaults.buttonColors(containerColor = cs.error, contentColor = cs.onError),
+                                ) { BtnContent(if (tripPhase == Phase.ARRIVED) TIcons.Done else TIcons.Close, stringResource(if (tripPhase == Phase.ARRIVED) R.string.common_finish else R.string.common_stop)) }
                             }
-                            Button(
-                                onClick = { NavController.stopNavigation() },
-                                colors = if (phase == Phase.ARRIVED) ButtonDefaults.buttonColors()
-                                else ButtonDefaults.buttonColors(containerColor = cs.error, contentColor = cs.onError),
-                            ) { BtnContent(if (phase == Phase.ARRIVED) TIcons.Done else TIcons.Close, if (phase == Phase.ARRIVED) "Finish" else "Stop") }
                         }
                     }
 
                     // -- always-visible status line (README 4) --
                     val f = fix
                     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        InfoChip(TIcons.MyLocation, if (f != null) "%.5f, %.5f".format(f.lat, f.lon) else "no fix",
-                            onClick = { f?.let { clipboard.setText(AnnotatedString("%.6f, %.6f".format(it.lat, it.lon))) } })
+                        InfoChip(TIcons.MyLocation, if (f != null) "%.5f, %.5f".format(java.util.Locale.US, f.lat, f.lon) else stringResource(R.string.map_no_fix),
+                            onClick = { f?.let { clipboard.setText(AnnotatedString("%.6f, %.6f".format(java.util.Locale.US, it.lat, it.lon))) } })
                         if (f != null) InfoChip(null, "±${f.acc.toInt()} m  ${(f.speed * if (settings.imperial) 2.236936f else 3.6f).toInt()} ${if (settings.imperial) "mph" else "km/h"}")
-                        if (phoneOnly) InfoChip(TIcons.Warning, "Phone only", tint = cs.error)
-                        if (sim) InfoChip(TIcons.Play, "Simulated", tint = cs.error)
+                        if (phoneOnly) InfoChip(TIcons.Warning, stringResource(R.string.map_phone_only), tint = cs.error)
+                        if (sim) InfoChip(TIcons.Play, stringResource(R.string.map_simulated), tint = cs.error)
                         InfoChip(TIcons.Bluetooth, bleLabel(bleState), tint = bleColor(bleState))
                     }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("© OpenStreetMap contributors", style = MaterialTheme.typography.labelSmall, color = cs.onSurfaceVariant)
                         if (settings.debug) Text(if (debugDots) "hide snapped dot" else "show snapped dot",
                             style = MaterialTheme.typography.labelSmall, color = cs.primary,
@@ -555,10 +606,10 @@ fun MapScreen() {
         AlertDialog(
             onDismissRequest = { NavController.dismissSwapPrompt() },
             icon = { Icon(TIcons.Refresh, null) },
-            title = { Text("Swap latitude and longitude?") },
-            text = { Text("Those numbers look swapped. Did you mean %.5f, %.5f (lat, lon)?".format(s.lat, s.lon)) },
-            confirmButton = { TextButton(onClick = { NavController.acceptSwap() }) { Text("Use swapped") } },
-            dismissButton = { TextButton(onClick = { NavController.dismissSwapPrompt() }) { Text("Cancel") } },
+            title = { Text(stringResource(R.string.swap_title)) },
+            text = { Text(stringResource(R.string.swap_text, "%.5f".format(java.util.Locale.US, s.lat), "%.5f".format(java.util.Locale.US, s.lon))) },
+            confirmButton = { TextButton(onClick = { NavController.acceptSwap() }) { Text(stringResource(R.string.swap_use)) } },
+            dismissButton = { TextButton(onClick = { NavController.dismissSwapPrompt() }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
-}
+}
